@@ -33,11 +33,9 @@ import com.jcraft.jsch.Session;
 import com.jcraft.jsch.SftpException;
 import com.jcraft.jsch.SftpProgressMonitor;
 import java.io.File;
-import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.net.FileNameMap;
 import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -513,7 +511,7 @@ public class MainActivity3 extends Activity {
             runOnUiThread(() -> {
                 progressBar.setProgress(0);
                 progressBar.setVisibility(View.GONE);
-                GreenCustomToast.showCustomToast(getApplicationContext(), "File Uploaded.", openFileInput());
+                GreenCustomToast.showCustomToast(getApplicationContext(), "File Uploaded.");
 
                 showChooseDialog();
             });
