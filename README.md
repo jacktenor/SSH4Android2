@@ -13,7 +13,7 @@ Click "ok" and after it's imported use the build menu to build it.
 I'm sure theres a better way but that worked for me.                                   
 
 
-![alt text](https://github.com/jacktenor/ssh4android/blob/main/cat.png?raw=true)
-![alt text](https://github.com/jacktenor/ssh4android/blob/main/catagain.png?raw=true)
-![alt text](https://github.com/jacktenor/ssh4android/blob/main/catup.png?raw=true)
-![alt text](https://github.com/jacktenor/ssh4android/blob/main/catdown.png?raw=true)
+![alt text](https://github.com/jacktenor/ssh4android2/blob/main/cat.png?raw=true)
+![alt text](https://github.com/jacktenor/ssh4android2/blob/main/catagain.png?raw=true)
+![alt text](https://github.com/jacktenor/ssh4android2/blob/main/catup.png?raw=true)
+![alt text](https://github.com/jacktenor/ssh4android2/blob/main/catdown.png?raw=true)
