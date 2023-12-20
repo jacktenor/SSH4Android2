@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="ListFont"
+        parent="Theme.MaterialComponents.DayNight.NoActionBar"
+        parent2="@android:style/Widget.ListView">
+        <item name="android:textColor">#FFFFFF</item>
+        <item name="android:textAlignment">center</item>
+        <item name="colorSecondary">@color/Ash_Gray</item>
+        <item name="colorSecondaryVariant">@color/Ash_Gray</item>
+    </style>
+    <style name="DropDownItemStyle"
+        parent="Widget.AppCompat.DropDownItem.Spinner">
+        <item name="android:textColor">#FFFFFF</item>
+        <item name="android:textAlignment">center</item>
+
+        <!-- Add more styling attributes as needed -->
+    </style>
+</resources>
