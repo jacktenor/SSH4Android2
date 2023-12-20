@@ -512,7 +512,6 @@ public class MainActivity3 extends Activity {
                 progressBar.setProgress(0);
                 progressBar.setVisibility(View.GONE);
                 GreenCustomToast.showCustomToast(getApplicationContext(), "File Uploaded.");
-
                 showChooseDialog();
             });
         });
