@@ -511,11 +511,17 @@ public class MainActivity3 extends Activity {
             runOnUiThread(() -> {
                 progressBar.setProgress(0);
                 progressBar.setVisibility(View.GONE);
-                GreenCustomToast.showCustomToast(getApplicationContext(), "File Uploaded.");
+
+                // Extract the file name from the remoteFileDestination
+                String fileName = new File(remoteFileDestination).getName();
+
+                // Display the file name in the toast
+                GreenCustomToast.showCustomToast(getApplicationContext(),fileName + " Uploaded.");
+
                 showChooseDialog();
             });
-        });
-    }
+            });
+        }
 
     // Define showChooseDialog() outside of any other methods
     private void showChooseDialog() {

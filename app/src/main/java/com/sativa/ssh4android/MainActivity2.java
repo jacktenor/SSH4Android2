@@ -8,7 +8,6 @@ import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Environment;
 import android.text.InputType;
-import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.WindowManager;
@@ -67,11 +66,11 @@ public class MainActivity2 extends Activity {
     private List<String> fileList;
     private AlertDialog alertDialog;
     private String currentRemoteDirectory = "/";
+    private Set<String> inputHistory;
     private static final String GO_UP = "PARENT DIRECTORY\n";
     private ProgressBar progressBar;
     private static final int REQUEST_WRITE_EXTERNAL_STORAGE = 1;
     private CheckBox savePasswordCheckbox;
-    private Set<String> inputHistory;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -152,9 +151,11 @@ public class MainActivity2 extends Activity {
                 loadInputHistory();
             } else {
                 // Permission denied, show a message or take appropriate action
-                loadInputHistory();            }
+                loadInputHistory(); //TODO
+            }
         }
     }
+
     private Set<String> loadInputHistory() {
         return getSharedPreferences("InputHistory", MODE_PRIVATE)
                 .getStringSet(INPUT_HISTORY_KEY, new HashSet<>());
@@ -173,41 +174,33 @@ public class MainActivity2 extends Activity {
         inputAutoComplete.setText("");
         currentQuestionIndex++;
 
-        if (currentQuestionIndex < questions.size()) {
+        if (currentQuestionIndex == questions.size()) {
             // Autofill the password if available for the corresponding username and server address
             SharedPreferences sharedPreferences = getSharedPreferences("SavedCredentials", MODE_PRIVATE);
             String savedUsername = sharedPreferences.getString("savedUsername", null);
             String savedServerAddress = sharedPreferences.getString("savedServerAddress", null);
 
-            if (savedUsername != null && savedServerAddress != null && savedUsername.equals(username) && savedServerAddress.equals(serverAddress)) {
-                // Correct the variable name here
+            if (savedUsername != null && savedServerAddress != null) {
                 String savedPassword = getPassword(savedServerAddress, savedUsername);
 
-                Log.d("MainActivity2", "Autofill condition met");
-
-                // Check the currentQuestionIndex and populate the appropriate field
-                switch (currentQuestionIndex - 1) {
-                    case 1:
-                        // Populate the username field
-                        inputAutoComplete.setText(username);
-                        break;
-                    case 2:
-                        // Populate the password field
-                        inputAutoComplete.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+                if (savedPassword != null) {
+                    // Check if the current question is related to the password
+                    if (currentQuestionIndex - 1 == 2) {
+                        // Modify this line to set the password to the correct field
                         inputAutoComplete.setText(savedPassword);
-                        break;
-                    case 3:
-                        // Populate the command field
-                        inputAutoComplete.setInputType(InputType.TYPE_CLASS_TEXT);
-                        inputAutoComplete.setText(command);
-                        break;
+                    }
                 }
+            }
+
+            if (currentQuestionIndex >= questions.size()) {
+                // All questions answered, initiate connection and command execution
+                enterButton.setText(R.string.connect2);
             }
         }
     }
 
+
     private void updateInputHistory(String newInput) {
-        Set<String> inputHistory = loadInputHistory();
         inputHistory.add(newInput);
         saveInputHistory(new ArrayList<>(inputHistory));
     }
@@ -233,11 +226,12 @@ public class MainActivity2 extends Activity {
                 username = input;
                 savePasswordCheckbox.setVisibility(View.VISIBLE);
                 inputAutoComplete.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+                savePassword = savePasswordCheckbox.isChecked();
                 break;
             case 2:
                 savePassword = savePasswordCheckbox.isChecked();
-                password = input;
                 savePasswordCheckbox.setVisibility(View.GONE);
+                password = input;
                 inputAutoComplete.setInputType(InputType.TYPE_CLASS_TEXT);
                 break;
             case 3:
@@ -256,9 +250,8 @@ public class MainActivity2 extends Activity {
             connectAndExecuteCommand();
         }
     }
-    // Add a method to save the password to SharedPreferences
-    private void savePassword() {
 
+    private void savePassword() {
         SharedPreferences sharedPreferences = getSharedPreferences("SavedCredentials", MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPreferences.edit();
 
@@ -439,20 +432,19 @@ public class MainActivity2 extends Activity {
             });
         });
 
-
+        fileListView.setVisibility(View.VISIBLE);
         inputAutoComplete.setText("");
         inputAutoComplete.setEnabled(false);
         enterButton.setEnabled(false);
         inputAutoComplete.setVisibility(View.GONE);
         enterButton.setVisibility(View.GONE);
-        fileListView.setVisibility(View.VISIBLE);
     }
 
     private void displayOutput(String output) {
         fileList.clear();  // Clear the list before adding new files
         String[] entries = output.split("\\s+");
+
         Collections.addAll(fileList, entries);
-        Collections.sort(fileList);
 
         ArrayAdapter<String> adapter = new ArrayAdapter<>(this, android.R.layout.simple_list_item_1, fileList);
         fileListView.setAdapter(adapter);
@@ -567,10 +559,12 @@ public class MainActivity2 extends Activity {
 
     private void updateFileListView(List<String> directoryContents) {
         fileList.clear();  // Clear the list before adding new files
-        // Add the "go up" item at the top\
-        fileList.add(GO_UP);
 
-        Collections.sort(directoryContents);
+        // Use a case-insensitive comparator for sorting
+        Collections.sort(directoryContents, String.CASE_INSENSITIVE_ORDER);
+
+        // Add the "go up" item at the top
+        fileList.add(GO_UP);
 
         // Add new files and directories
         fileList.addAll(directoryContents);
