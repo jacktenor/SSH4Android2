@@ -8,6 +8,7 @@ import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Environment;
 import android.text.InputType;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.WindowManager;
@@ -62,6 +63,7 @@ public class MainActivity2 extends Activity {
     private String username;
     private String serverAddress;
     private String password;
+    protected String savedPassword;
     private String command;
     private List<String> fileList;
     private AlertDialog alertDialog;
@@ -83,7 +85,6 @@ public class MainActivity2 extends Activity {
         fileListView = findViewById(R.id.fileListView);
         progressBar = findViewById(R.id.progressBar);
         savePasswordCheckbox = findViewById(R.id.savePasswordCheckbox);
-
 
         inputAutoComplete.setInputType(InputType.TYPE_CLASS_TEXT);
 
@@ -156,6 +157,7 @@ public class MainActivity2 extends Activity {
         }
     }
 
+
     private Set<String> loadInputHistory() {
         return getSharedPreferences("InputHistory", MODE_PRIVATE)
                 .getStringSet(INPUT_HISTORY_KEY, new HashSet<>());
@@ -174,7 +176,7 @@ public class MainActivity2 extends Activity {
         inputAutoComplete.setText("");
         currentQuestionIndex++;
 
-        if (currentQuestionIndex == questions.size()) {
+        if (currentQuestionIndex == 3) {
             // Autofill the password if available for the corresponding username and server address
             SharedPreferences sharedPreferences = getSharedPreferences("SavedCredentials", MODE_PRIVATE);
             String savedUsername = sharedPreferences.getString("savedUsername", null);
@@ -184,17 +186,18 @@ public class MainActivity2 extends Activity {
                 String savedPassword = getPassword(savedServerAddress, savedUsername);
 
                 if (savedPassword != null) {
-                    // Check if the current question is related to the password
-                    if (currentQuestionIndex - 1 == 2) {
-                        // Modify this line to set the password to the correct field
-                        inputAutoComplete.setText(savedPassword);
-                    }
+                    inputAutoComplete.setText(savedPassword);
+                    Log.d("MainActivity2", "savedPassword1: " + savedPassword);
+                    Log.d("MainActivity2", "serverAddress Status: " + serverAddress);
+                    Log.d("MainActivity2", "username Status: " + username);
+                    Log.d("MainActivity2", "savedPassword Status: " + inputAutoComplete.getText().toString());
                 }
-            }
 
-            if (currentQuestionIndex >= questions.size()) {
-                // All questions answered, initiate connection and command execution
-                enterButton.setText(R.string.connect2);
+
+                if (currentQuestionIndex == 2)
+                    // All questions answered, initiate connection and command execution
+                    inputAutoComplete.setText(savedPassword);
+                Log.d("MainActivity2", "currentQuestionIndex == 2: " + savedPassword);
             }
         }
     }
@@ -204,7 +207,6 @@ public class MainActivity2 extends Activity {
         inputHistory.add(newInput);
         saveInputHistory(new ArrayList<>(inputHistory));
     }
-
     private void handleInput() {
         String input = inputAutoComplete.getText().toString();
 
@@ -226,16 +228,19 @@ public class MainActivity2 extends Activity {
                 username = input;
                 savePasswordCheckbox.setVisibility(View.VISIBLE);
                 inputAutoComplete.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
-                savePassword = savePasswordCheckbox.isChecked();
+                inputAutoComplete.setText(savedPassword);
                 break;
             case 2:
                 savePassword = savePasswordCheckbox.isChecked();
-                savePasswordCheckbox.setVisibility(View.GONE);
+                Log.d("MainActivity2", "savePassword2: " + savePassword);
                 password = input;
+                inputAutoComplete.setText("");
+                savePasswordCheckbox.setVisibility(View.GONE);
                 inputAutoComplete.setInputType(InputType.TYPE_CLASS_TEXT);
                 break;
             case 3:
                 command = input;
+                savePassword();
                 break;
         }
 
@@ -251,7 +256,10 @@ public class MainActivity2 extends Activity {
         }
     }
 
+    // Add a method to save the password to SharedPreferences
     private void savePassword() {
+        Log.d("MainActivity2", "Saving password...");
+
         SharedPreferences sharedPreferences = getSharedPreferences("SavedCredentials", MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPreferences.edit();
 
@@ -288,8 +296,14 @@ public class MainActivity2 extends Activity {
         Map<String, String> passwordsMap = getPasswordsMap();
 
         // Get the password for the given server address and username
-        return passwordsMap.get(serverAddress + "_" + username);
+        String password = passwordsMap.get(serverAddress + "_" + username);
+
+        // Log the retrieved password
+        Log.d("MainActivity2", "Retrieved password: " + password);
+        Log.d("MainActivity2", "Retrieved passwordsMap: " + passwordsMap);
+        return password;
     }
+
 
     private void connectAndExecuteCommand() {
         Executor executor = Executors.newSingleThreadExecutor();
@@ -561,7 +575,7 @@ public class MainActivity2 extends Activity {
         fileList.clear();  // Clear the list before adding new files
 
         // Use a case-insensitive comparator for sorting
-        Collections.sort(directoryContents, String.CASE_INSENSITIVE_ORDER);
+        directoryContents.sort(String.CASE_INSENSITIVE_ORDER);
 
         // Add the "go up" item at the top
         fileList.add(GO_UP);
