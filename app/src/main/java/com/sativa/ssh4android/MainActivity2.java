@@ -1,8 +1,11 @@
 package com.sativa.ssh4android;
 
+import static android.view.View.VISIBLE;
+
 import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
@@ -63,7 +66,6 @@ public class MainActivity2 extends Activity {
     private String username;
     private String serverAddress;
     private String password;
-    protected String savedPassword;
     private String command;
     private List<String> fileList;
     private AlertDialog alertDialog;
@@ -73,6 +75,7 @@ public class MainActivity2 extends Activity {
     private ProgressBar progressBar;
     private static final int REQUEST_WRITE_EXTERNAL_STORAGE = 1;
     private CheckBox savePasswordCheckbox;
+    private View button;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -80,6 +83,7 @@ public class MainActivity2 extends Activity {
         setContentView(R.layout.activity_main2);
         getWindow().setBackgroundDrawableResource(R.drawable.panther);
 
+        button = findViewById(R.id.button);
         inputAutoComplete = findViewById(R.id.inputAutoComplete);
         enterButton = findViewById(R.id.enterButton);
         fileListView = findViewById(R.id.fileListView);
@@ -87,6 +91,14 @@ public class MainActivity2 extends Activity {
         savePasswordCheckbox = findViewById(R.id.savePasswordCheckbox);
 
         inputAutoComplete.setInputType(InputType.TYPE_CLASS_TEXT);
+
+        button.setOnClickListener(view -> {
+            Intent i = new Intent(MainActivity2.this, MainActivity.class);
+            final Animation myAnim = AnimationUtils.loadAnimation(this, R.anim.bounce);
+            button.startAnimation(myAnim);
+            startActivity(i);
+        });
+
 
         inputAutoComplete.setOnKeyListener((v, keyCode, event) -> {
             if (keyCode == KeyEvent.KEYCODE_ENTER && event.getAction() == KeyEvent.ACTION_DOWN) {
@@ -157,7 +169,6 @@ public class MainActivity2 extends Activity {
         }
     }
 
-
     private Set<String> loadInputHistory() {
         return getSharedPreferences("InputHistory", MODE_PRIVATE)
                 .getStringSet(INPUT_HISTORY_KEY, new HashSet<>());
@@ -176,32 +187,24 @@ public class MainActivity2 extends Activity {
         inputAutoComplete.setText("");
         currentQuestionIndex++;
 
-        if (currentQuestionIndex == 3) {
-            // Autofill the password if available for the corresponding username and server address
-            SharedPreferences sharedPreferences = getSharedPreferences("SavedCredentials", MODE_PRIVATE);
-            String savedUsername = sharedPreferences.getString("savedUsername", null);
-            String savedServerAddress = sharedPreferences.getString("savedServerAddress", null);
 
-            if (savedUsername != null && savedServerAddress != null) {
-                String savedPassword = getPassword(savedServerAddress, savedUsername);
+        // Autofill the password if available for the corresponding username and server address
+        SharedPreferences sharedPreferences = getSharedPreferences("SavedCredentials", MODE_PRIVATE);
+        String savedUsername = sharedPreferences.getString("savedUsername", null);
+        String savedServerAddress = sharedPreferences.getString("savedServerAddress", null);
 
-                if (savedPassword != null) {
-                    inputAutoComplete.setText(savedPassword);
-                    Log.d("MainActivity2", "savedPassword1: " + savedPassword);
-                    Log.d("MainActivity2", "serverAddress Status: " + serverAddress);
-                    Log.d("MainActivity2", "username Status: " + username);
-                    Log.d("MainActivity2", "savedPassword Status: " + inputAutoComplete.getText().toString());
-                }
-
-
-                if (currentQuestionIndex == 2)
-                    // All questions answered, initiate connection and command execution
-                    inputAutoComplete.setText(savedPassword);
-                Log.d("MainActivity2", "currentQuestionIndex == 2: " + savedPassword);
+        if (savedUsername != null && savedServerAddress != null) {
+            String savedPassword = getPassword(savedServerAddress, savedUsername);
+            if (savedPassword != null && currentQuestionIndex == 3) {
+                inputAutoComplete.setText(savedPassword);
             }
+
+            Log.d("MainActivity2", "savedPassword1: " + savedPassword);
+            Log.d("MainActivity2", "serverAddress Status: " + serverAddress);
+            Log.d("MainActivity2", "username Status: " + username);
+            Log.d("MainActivity2", "savedPassword Status: " + inputAutoComplete.getText().toString());
         }
     }
-
 
     private void updateInputHistory(String newInput) {
         inputHistory.add(newInput);
@@ -218,7 +221,7 @@ public class MainActivity2 extends Activity {
         inputHistory.add(input);
         saveInputHistory(new ArrayList<>(inputHistory));
 
-        boolean savePassword = false;
+        boolean savePassword = savePasswordCheckbox.isChecked();
 
         switch (currentQuestionIndex - 1) {
             case 0:
@@ -226,21 +229,21 @@ public class MainActivity2 extends Activity {
                 break;
             case 1:
                 username = input;
-                savePasswordCheckbox.setVisibility(View.VISIBLE);
+                savePasswordCheckbox.setVisibility(VISIBLE);
                 inputAutoComplete.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
-                inputAutoComplete.setText(savedPassword);
                 break;
             case 2:
-                savePassword = savePasswordCheckbox.isChecked();
-                Log.d("MainActivity2", "savePassword2: " + savePassword);
                 password = input;
-                inputAutoComplete.setText("");
                 savePasswordCheckbox.setVisibility(View.GONE);
                 inputAutoComplete.setInputType(InputType.TYPE_CLASS_TEXT);
                 break;
             case 3:
                 command = input;
-                savePassword();
+                if (savePassword) {
+                    savePassword();
+                }
+                inputAutoComplete.setText("");
+                Log.d("MainActivity2", "savePassword2: " + savePassword);
                 break;
         }
 
@@ -248,10 +251,6 @@ public class MainActivity2 extends Activity {
             // Set next question
             setNextQuestion();
         } else {
-            // All questions answered, initiate connection and command execution
-            if (savePassword) {
-                savePassword();
-            }
             connectAndExecuteCommand();
         }
     }
@@ -289,6 +288,8 @@ public class MainActivity2 extends Activity {
         String passwordsJson = new Gson().toJson(passwordsMap);
         editor.putString("passwordsMap", passwordsJson);
         editor.apply();
+
+        getPassword(serverAddress, username);
     }
 
     private String getPassword(String serverAddress, String username) {
@@ -446,7 +447,7 @@ public class MainActivity2 extends Activity {
             });
         });
 
-        fileListView.setVisibility(View.VISIBLE);
+        fileListView.setVisibility(VISIBLE);
         inputAutoComplete.setText("");
         inputAutoComplete.setEnabled(false);
         enterButton.setEnabled(false);
@@ -467,7 +468,7 @@ public class MainActivity2 extends Activity {
     private void downloadFile(final String filePath) {
         // Use the activityReference field
         Executor executor = Executors.newSingleThreadExecutor();
-        progressBar.setVisibility(View.VISIBLE);
+        progressBar.setVisibility(VISIBLE);
 
         executor.execute(() -> {
             WeakReference<MainActivity2> activityReference = new WeakReference<>(MainActivity2.this);

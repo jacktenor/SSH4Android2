@@ -51,8 +51,8 @@ public class MainActivity extends Activity {
 
         button4.setOnClickListener(v -> {
             if (!isSureButtonClicked) {
-
                 // First click, change the label to "ARE YOU SURE?"
+
                 button4.setTextColor( Color.RED );
                 button4.setText("ARE YOU\n SURE?");
                 isSureButtonClicked = true;

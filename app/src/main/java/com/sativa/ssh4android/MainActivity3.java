@@ -61,6 +61,7 @@ public class MainActivity3 extends Activity {
     private ProgressBar progressBar;
     protected String remoteFileDestination;
     private CheckBox savePasswordCheckbox;
+    private Button button;
 
     private final AtomicInteger lastProgress = new AtomicInteger(-1);
 
@@ -75,8 +76,16 @@ public class MainActivity3 extends Activity {
         enterButton = findViewById(R.id.enterButton);
         progressBar = findViewById(R.id.progressBar);
         savePasswordCheckbox = findViewById(R.id.savePasswordCheckbox);
+        button = findViewById(R.id.button);
 
         inputAutoComplete.setInputType(InputType.TYPE_CLASS_TEXT);
+
+        button.setOnClickListener(view -> {
+            Intent i = new Intent(MainActivity3.this, MainActivity.class);
+            final Animation myAnim = AnimationUtils.loadAnimation(this, R.anim.bounce);
+            button.startAnimation(myAnim);
+            startActivity(i);
+        });
 
         inputAutoComplete.setOnKeyListener((v, keyCode, event) -> {
             if (keyCode == KeyEvent.KEYCODE_ENTER && event.getAction() == KeyEvent.ACTION_DOWN) {
