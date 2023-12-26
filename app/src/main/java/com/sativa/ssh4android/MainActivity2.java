@@ -1,7 +1,6 @@
 package com.sativa.ssh4android;
 
 import static android.view.View.VISIBLE;
-
 import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -24,11 +23,9 @@ import android.widget.CheckBox;
 import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
-
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.jcraft.jsch.ChannelExec;
@@ -39,7 +36,6 @@ import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
 import com.jcraft.jsch.SftpATTRS;
 import com.jcraft.jsch.SftpException;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -242,7 +238,7 @@ public class MainActivity2 extends Activity {
                 if (savePassword) {
                     savePassword();
                 }
-                inputAutoComplete.setText("");
+                inputAutoComplete.setText(""); // Clear the input field
                 Log.d("MainActivity2", "savePassword2: " + savePassword);
                 break;
         }
@@ -270,7 +266,7 @@ public class MainActivity2 extends Activity {
 
         // Save the updated passwords map
         savePasswordsMap(passwordsMap);
-
+        Log.d("MainActivity2", "Retrieved passwordsMap1: " + passwordsMap);
         editor.putString("savedServerAddress", serverAddress);
         editor.putString("savedUsername", username);
         editor.apply();
@@ -279,6 +275,7 @@ public class MainActivity2 extends Activity {
     private Map<String, String> getPasswordsMap() {
         SharedPreferences sharedPreferences = getSharedPreferences("SavedCredentials", MODE_PRIVATE);
         String passwordsJson = sharedPreferences.getString("passwordsMap", "{}");
+        Log.d("MainActivity2", "Retrieved passwordsJson1: " + passwordsJson);
         return new Gson().fromJson(passwordsJson, new TypeToken<Map<String, String>>() {}.getType());
     }
 
@@ -288,7 +285,7 @@ public class MainActivity2 extends Activity {
         String passwordsJson = new Gson().toJson(passwordsMap);
         editor.putString("passwordsMap", passwordsJson);
         editor.apply();
-
+        Log.d("MainActivity2", "Retrieved passwordsJson: " + passwordsJson);
         getPassword(serverAddress, username);
     }
 
@@ -304,7 +301,6 @@ public class MainActivity2 extends Activity {
         Log.d("MainActivity2", "Retrieved passwordsMap: " + passwordsMap);
         return password;
     }
-
 
     private void connectAndExecuteCommand() {
         Executor executor = Executors.newSingleThreadExecutor();
