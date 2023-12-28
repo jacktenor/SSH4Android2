@@ -143,24 +143,22 @@ public class MainActivity3 extends Activity {
         inputAutoComplete.setText("");
         currentQuestionIndex++;
 
-        if (currentQuestionIndex == questions.size()) {
-            // Autofill the password if available for the corresponding username and server address
-            SharedPreferences sharedPreferences = getSharedPreferences("SavedCredentials", MODE_PRIVATE);
-            String savedUsername = sharedPreferences.getString("savedUsername", null);
-            String savedServerAddress = sharedPreferences.getString("savedServerAddress", null);
+        // Save the new password for the current server address and username
+        Credential credential = new Credential(serverAddress, username, password);
+        credential.saveCredentials(getApplicationContext());
 
-            if (savedUsername != null && savedServerAddress != null) {
-                String savedPassword = getPassword(savedServerAddress, savedUsername);
+        // Retrieve saved credentials
+        Credential savedCredentials = Credential.getSavedCredentials(getApplicationContext());
 
-                if (savedPassword != null) {
-                    inputAutoComplete.setText(savedPassword);
-                }
-            }
+        if (savedCredentials != null && currentQuestionIndex == 3
+                && savedCredentials.getServerAddress().equals(serverAddress)
+                && savedCredentials.getUsername().equals(username)) {
+            // Fill the password only if the saved server address and username match the current ones
+            String savedPassword = getPassword(serverAddress, username);
+            if (savedPassword != null) {
+                inputAutoComplete.setText(savedPassword);
 
-            if (currentQuestionIndex >= questions.size()) {
-                // All questions answered, initiate connection and command execution
-                enterButton.setText(R.string.connect2);
-
+                Log.d("MainActivity3", "savedPassword1: " + savedPassword);
                 Log.d("MainActivity3", "serverAddress Status: " + serverAddress);
                 Log.d("MainActivity3", "username Status: " + username);
                 Log.d("MainActivity3", "savedPassword Status: " + inputAutoComplete.getText().toString());
