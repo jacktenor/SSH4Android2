@@ -23,8 +23,6 @@ import android.widget.CheckBox;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
 import com.jcraft.jsch.Channel;
 import com.jcraft.jsch.ChannelSftp;
 import com.jcraft.jsch.JSch;
@@ -32,6 +30,7 @@ import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
 import com.jcraft.jsch.SftpException;
 import com.jcraft.jsch.SftpProgressMonitor;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -40,7 +39,7 @@ import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
@@ -102,16 +101,11 @@ public class MainActivity3 extends Activity {
         SharedPreferences sharedPreferences = getSharedPreferences("InputHistory", MODE_PRIVATE);
         inputHistory = new HashSet<>(sharedPreferences.getStringSet(INPUT_HISTORY_KEY, new HashSet<>()));
 
-        // Set up AutoCompleteTextView with input history
-        ArrayAdapter<String> autoCompleteAdapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, new ArrayList<>(inputHistory));
-        inputAutoComplete.setAdapter(autoCompleteAdapter);
-
 
         questions = new ArrayList<>();
         questions.add("SSH server address?");
         questions.add("Username?");
         questions.add("Password?");
-
 
         currentQuestionIndex = 0;
         setNextQuestion();
@@ -121,8 +115,6 @@ public class MainActivity3 extends Activity {
         progressBar.setVisibility(View.GONE); // Set initial visibility to GONE
 
         enterButton.setOnClickListener(view -> handleInput());
-
-
     }
 
     private Set<String> loadInputHistory() {
@@ -154,7 +146,9 @@ public class MainActivity3 extends Activity {
                 && savedCredentials.getServerAddress().equals(serverAddress)
                 && savedCredentials.getUsername().equals(username)) {
             // Fill the password only if the saved server address and username match the current ones
-            String savedPassword = getPassword(serverAddress, username);
+            SharedPreferences sharedPreferences = getSharedPreferences("SavedCredentials", MODE_PRIVATE);
+            String savedPassword = sharedPreferences.getString("savedPassword", null);
+
             if (savedPassword != null) {
                 inputAutoComplete.setText(savedPassword);
 
@@ -163,6 +157,16 @@ public class MainActivity3 extends Activity {
                 Log.d("MainActivity3", "username Status: " + username);
                 Log.d("MainActivity3", "savedPassword Status: " + inputAutoComplete.getText().toString());
             }
+        }
+
+        // Set up AutoCompleteTextView with input history for non-password inputs
+        if (currentQuestionIndex != 3) {
+            Set<String> inputHistory = loadInputHistory();
+            ArrayAdapter<String> autoCompleteAdapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, new ArrayList<>(inputHistory));
+            inputAutoComplete.setAdapter(autoCompleteAdapter);
+        } else {
+            // Remove the password from the adapter during the password entry phase
+            inputAutoComplete.setAdapter(null);
         }
     }
 
@@ -174,8 +178,10 @@ public class MainActivity3 extends Activity {
     private void handleInput() {
         String input = inputAutoComplete.getText().toString();
 
-        // Update input history
-        updateInputHistory(input);
+        // Update input history for non-password inputs
+        if (currentQuestionIndex != 3) {
+            updateInputHistory(input);
+        }
 
         // Update input history
         Set<String> inputHistory = loadInputHistory();
@@ -196,6 +202,10 @@ public class MainActivity3 extends Activity {
             case 2:
                 savePassword = savePasswordCheckbox.isChecked();
                 password = input;
+                // Update input history only if the password is not saved
+                if (!savePassword) {
+                    updateInputHistory(input);
+                }
                 inputAutoComplete.setText("");
                 savePasswordCheckbox.setVisibility(View.GONE);
                 inputAutoComplete.setInputType(InputType.TYPE_CLASS_TEXT);
@@ -212,48 +222,17 @@ public class MainActivity3 extends Activity {
             }
             connectAndExecuteCommand();
         }
-        }
+    }
+
     // Add a method to save the password to SharedPreferences
     private void savePassword() {
         SharedPreferences sharedPreferences = getSharedPreferences("SavedCredentials", MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPreferences.edit();
-
-        // Retrieve existing passwords map
-        Map<String, String> passwordsMap = getPasswordsMap();
-
-        // Save the new password for the current server address and username
-        passwordsMap.put(serverAddress + "_" + username, password);
-
-        // Save the updated passwords map
-        savePasswordsMap(passwordsMap);
-
         editor.putString("savedServerAddress", serverAddress);
         editor.putString("savedUsername", username);
+        editor.putString("savedPassword", password); // Store the password
         editor.apply();
     }
-
-    private Map<String, String> getPasswordsMap() {
-        SharedPreferences sharedPreferences = getSharedPreferences("SavedCredentials", MODE_PRIVATE);
-        String passwordsJson = sharedPreferences.getString("passwordsMap", "{}");
-        return new Gson().fromJson(passwordsJson, new TypeToken<Map<String, String>>() {}.getType());
-    }
-
-    private void savePasswordsMap(Map<String, String> passwordsMap) {
-        SharedPreferences sharedPreferences = getSharedPreferences("SavedCredentials", MODE_PRIVATE);
-        SharedPreferences.Editor editor = sharedPreferences.edit();
-        String passwordsJson = new Gson().toJson(passwordsMap);
-        editor.putString("passwordsMap", passwordsJson);
-        editor.apply();
-    }
-
-    private String getPassword(String serverAddress, String username) {
-        // Retrieve passwords map
-        Map<String, String> passwordsMap = getPasswordsMap();
-
-        // Get the password for the given server address and username
-        return passwordsMap.get(serverAddress + "_" + username);
-    }
-
 
     private void connectAndExecuteCommand() {
         Executor executor = Executors.newSingleThreadExecutor();
@@ -407,7 +386,6 @@ public class MainActivity3 extends Activity {
 
     private void executeFileUpload(Uri selectedFileUri) {
         Executor executor = Executors.newSingleThreadExecutor();
-        progressBar.setVisibility(View.VISIBLE);
 
         executor.execute(() -> {
             // Set the local file location from the selected file URI
@@ -447,10 +425,10 @@ public class MainActivity3 extends Activity {
                     runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "JSchException: " + e.getMessage()));
                 }
 
+
                 try {
-                    assert channel != null;
-                    channel.connect();
-                } catch (JSchException e) {
+                    Objects.requireNonNull(channel).connect();
+            } catch (JSchException e) {
                     e.printStackTrace();
                     runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "JSchException: " + e.getMessage()));
                 }
@@ -498,8 +476,10 @@ public class MainActivity3 extends Activity {
                 };
 
                 try {
+                    runOnUiThread(() -> progressBar.setVisibility(View.VISIBLE));
+
                     // Set the progress monitor on the SFTP channel
-                    sftpChannel.put(localFileLocation, remoteFileDestination, progressMonitor);
+                    Objects.requireNonNull(sftpChannel).put(localFileLocation, remoteFileDestination, progressMonitor);
 
                     // Disconnect the transfer session
                     sftpChannel.exit();

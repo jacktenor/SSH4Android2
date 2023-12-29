@@ -29,8 +29,6 @@ import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
 import com.jcraft.jsch.ChannelExec;
 import com.jcraft.jsch.ChannelSftp;
 import com.jcraft.jsch.ChannelSftp.LsEntry;
@@ -50,7 +48,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.Vector;
 import java.util.concurrent.Executor;
@@ -198,15 +195,27 @@ public class MainActivity2 extends Activity {
                 && savedCredentials.getServerAddress().equals(serverAddress)
                 && savedCredentials.getUsername().equals(username)) {
             // Fill the password only if the saved server address and username match the current ones
-            String savedPassword = getPassword(serverAddress, username);
+            SharedPreferences sharedPreferences = getSharedPreferences("SavedCredentials", MODE_PRIVATE);
+            String savedPassword = sharedPreferences.getString("savedPassword", null);
+
             if (savedPassword != null) {
                 inputAutoComplete.setText(savedPassword);
 
-                Log.d("MainActivity2", "savedPassword1: " + savedPassword);
-                Log.d("MainActivity2", "serverAddress Status: " + serverAddress);
-                Log.d("MainActivity2", "username Status: " + username);
-                Log.d("MainActivity2", "savedPassword Status: " + inputAutoComplete.getText().toString());
+                Log.d("MainActivity3", "savedPassword1: " + savedPassword);
+                Log.d("MainActivity3", "serverAddress Status: " + serverAddress);
+                Log.d("MainActivity3", "username Status: " + username);
+                Log.d("MainActivity3", "savedPassword Status: " + inputAutoComplete.getText().toString());
             }
+        }
+
+        // Set up AutoCompleteTextView with input history for non-password inputs
+        if (currentQuestionIndex != 3) {
+            Set<String> inputHistory = loadInputHistory();
+            ArrayAdapter<String> autoCompleteAdapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, new ArrayList<>(inputHistory));
+            inputAutoComplete.setAdapter(autoCompleteAdapter);
+        } else {
+            // Remove the password from the adapter during the password entry phase
+            inputAutoComplete.setAdapter(null);
         }
     }
 
@@ -214,18 +223,21 @@ public class MainActivity2 extends Activity {
         inputHistory.add(newInput);
         saveInputHistory(new ArrayList<>(inputHistory));
     }
+
     private void handleInput() {
         String input = inputAutoComplete.getText().toString();
 
-        // Update input history
-        updateInputHistory(input);
+        // Update input history for non-password inputs
+        if (currentQuestionIndex != 3) {
+            updateInputHistory(input);
+        }
 
         // Update input history
         Set<String> inputHistory = loadInputHistory();
         inputHistory.add(input);
         saveInputHistory(new ArrayList<>(inputHistory));
 
-        boolean savePassword = savePasswordCheckbox.isChecked();
+        boolean savePassword = false;
 
         switch (currentQuestionIndex - 1) {
             case 0:
@@ -233,21 +245,22 @@ public class MainActivity2 extends Activity {
                 break;
             case 1:
                 username = input;
-                savePasswordCheckbox.setVisibility(VISIBLE);
+                savePasswordCheckbox.setVisibility(View.VISIBLE);
                 inputAutoComplete.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
                 break;
             case 2:
+                savePassword = savePasswordCheckbox.isChecked();
                 password = input;
+                // Update input history only if the password is not saved
+                if (!savePassword) {
+                    updateInputHistory(input);
+                }
+                inputAutoComplete.setText("");
                 savePasswordCheckbox.setVisibility(View.GONE);
                 inputAutoComplete.setInputType(InputType.TYPE_CLASS_TEXT);
                 break;
             case 3:
                 command = input;
-                if (savePassword) {
-                    savePassword();
-                }
-                inputAutoComplete.setText("");
-                Log.d("MainActivity2", "savePassword2: " + savePassword);
                 break;
         }
 
@@ -255,60 +268,23 @@ public class MainActivity2 extends Activity {
             // Set next question
             setNextQuestion();
         } else {
+            // All questions answered, initiate connection and command execution
+            if (savePassword) {
+                savePassword();
+            }
             connectAndExecuteCommand();
         }
     }
 
     // Add a method to save the password to SharedPreferences
     private void savePassword() {
-        Log.d("MainActivity2", "Saving password...");
-
         SharedPreferences sharedPreferences = getSharedPreferences("SavedCredentials", MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPreferences.edit();
-
-        // Retrieve existing passwords map
-        Map<String, String> passwordsMap = getPasswordsMap();
-
-        // Save the new password for the current server address and username
-        passwordsMap.put(serverAddress + "_" + username, password);
-
-        // Save the updated passwords map
-        savePasswordsMap(passwordsMap);
-
         editor.putString("savedServerAddress", serverAddress);
         editor.putString("savedUsername", username);
+        editor.putString("savedPassword", password); // Store the password
         editor.apply();
     }
-
-    private Map<String, String> getPasswordsMap() {
-        SharedPreferences sharedPreferences = getSharedPreferences("SavedCredentials", MODE_PRIVATE);
-        String passwordsJson = sharedPreferences.getString("passwordsMap", "{}");
-        return new Gson().fromJson(passwordsJson, new TypeToken<Map<String, String>>() {}.getType());
-    }
-
-    private void savePasswordsMap(Map<String, String> passwordsMap) {
-        SharedPreferences sharedPreferences = getSharedPreferences("SavedCredentials", MODE_PRIVATE);
-        SharedPreferences.Editor editor = sharedPreferences.edit();
-        String passwordsJson = new Gson().toJson(passwordsMap);
-        editor.putString("passwordsMap", passwordsJson);
-        editor.apply();
-
-        getPassword(serverAddress, username);
-    }
-
-    private String getPassword(String serverAddress, String username) {
-        // Retrieve passwords map
-        Map<String, String> passwordsMap = getPasswordsMap();
-
-        // Get the password for the given server address and username
-        String password = passwordsMap.get(serverAddress + "_" + username);
-
-        // Log the retrieved password
-        Log.d("MainActivity2", "Retrieved password: " + password);
-        Log.d("MainActivity2", "Retrieved passwordsMap: " + passwordsMap);
-        return password;
-    }
-
 
     private void connectAndExecuteCommand() {
         Executor executor = Executors.newSingleThreadExecutor();
