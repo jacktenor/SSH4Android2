@@ -121,8 +121,6 @@ public class MainActivity3 extends Activity {
         progressBar.setVisibility(View.GONE); // Set initial visibility to GONE
 
         enterButton.setOnClickListener(view -> handleInput());
-
-
     }
 
     private Set<String> loadInputHistory() {
