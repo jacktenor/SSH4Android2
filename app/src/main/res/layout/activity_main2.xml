@@ -35,7 +35,6 @@
         android:textAlignment="center"
         android:textColor="#FFFFFF"
         android:textColorHint="#757575"
-        android:textStyle="bold|italic"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
@@ -46,9 +45,11 @@
         android:layout_height="420dp"
         android:layout_marginTop="100dp"
         android:background="@android:color/transparent"
+        android:clickable="true"
         android:divider="@null"
         android:gravity="center|center_horizontal|center_vertical"
         android:isScrollContainer="true"
+        android:longClickable="true"
         android:orientation="vertical"
         android:textAlignment="center"
         android:textColor="#FFFFFF"
@@ -58,15 +59,29 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
+    <com.google.android.material.progressindicator.CircularProgressIndicator
+        android:id="@+id/spinner"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="25dp"
+        android:indeterminate="true"
+        app:indicatorColor="#757575"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:trackColor="#00000000" />
+
     <ProgressBar
         android:id="@+id/progressBar"
         style="?android:attr/progressBarStyleHorizontal"
         android:layout_width="275dp"
         android:layout_height="wrap_content"
         android:layout_marginTop="75dp"
-        android:visibility="gone"
         android:background="@android:color/transparent"
         android:progressTint="#757575"
+        android:visibility="gone"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintStart_toStartOf="parent"
@@ -82,14 +97,14 @@
         android:textColor="#FFFFFF"
         android:visibility="gone"
         app:layout_constraintStart_toEndOf="@+id/inputAutoComplete"
-        app:layout_constraintTop_toTopOf="parent"  />
+        app:layout_constraintTop_toTopOf="parent" />
 
     <Button
         android:id="@+id/button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:minWidth="50sp"
         android:background="@android:color/transparent"
+        android:minWidth="50sp"
         android:text="@string/main_menu22"
         android:textColor="#FFFFFF"
         app:layout_constraintBottom_toTopOf="@+id/textView2"

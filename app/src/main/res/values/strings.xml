@@ -137,4 +137,14 @@
     <string name="save_npassword2">"  Save\nPassword?"</string>
     <string name="save_npassword3">Save\nPassword?</string>
     <string name="main_menu22">Main Menu</string>
+    <string name="download_entire_directory">Download entire directory?</string>
+    <string name="or_cancel">"Or cancel?"</string>
+    <string name="download_directory_or_return_to_list">Download directory or return to list?</string>
+    <string name="download_directory">Download Directory</string>
+    <string name="cancel">Cancel</string>
+    <string name="download">Download</string>
+    <string name="download_directory_or_cancel">Download Directory Or Cancel?</string>
+    <string name="directory_download">Directory Download</string>
+    <string name="or_cancel2">Or Cancel?</string>
+    <string name="download_directory2">Download Directory:\n\n</string>
 </resources>

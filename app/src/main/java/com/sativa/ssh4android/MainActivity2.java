@@ -1,7 +1,6 @@
 package com.sativa.ssh4android;
 
 import static android.view.View.VISIBLE;
-
 import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -11,7 +10,6 @@ import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Environment;
 import android.text.InputType;
-import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.WindowManager;
@@ -24,11 +22,9 @@ import android.widget.CheckBox;
 import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
-
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.jcraft.jsch.ChannelExec;
@@ -39,12 +35,13 @@ import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
 import com.jcraft.jsch.SftpATTRS;
 import com.jcraft.jsch.SftpException;
-
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.lang.ref.WeakReference;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -65,18 +62,21 @@ public class MainActivity2 extends Activity {
     private int currentQuestionIndex;
     private static final String INPUT_HISTORY_KEY = "input_history";
     private String username;
+    private List<String> directoryContents;
     private String serverAddress;
     private String password;
     private String command;
     private List<String> fileList;
     private AlertDialog alertDialog;
-    private String currentRemoteDirectory = "/";
+    private String currentRemoteDirectory = ".";
     private Set<String> inputHistory;
     private static final String GO_UP = "PARENT DIRECTORY\n";
     private ProgressBar progressBar;
     private static final int REQUEST_WRITE_EXTERNAL_STORAGE = 1;
     private CheckBox savePasswordCheckbox;
     private View button;
+    private View spinner;
+
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -90,6 +90,7 @@ public class MainActivity2 extends Activity {
         fileListView = findViewById(R.id.fileListView);
         progressBar = findViewById(R.id.progressBar);
         savePasswordCheckbox = findViewById(R.id.savePasswordCheckbox);
+        spinner = findViewById(R.id.spinner);
 
         inputAutoComplete.setInputType(InputType.TYPE_CLASS_TEXT);
 
@@ -138,14 +139,79 @@ public class MainActivity2 extends Activity {
 
         enterButton.setOnClickListener(view -> handleInput());
 
+
+
         fileList = new ArrayList<>();
+        directoryContents = new ArrayList<>();  // Initialize as an empty list
 
         fileListView.setOnItemClickListener((parent, view, position, id) -> downloadFile(fileList.get(position)));
+
+        // Add this block for handling long press on directory
+
+        fileListView.setOnItemLongClickListener((parent, view, position, id) -> {
+            String selectedFile = fileList.get(position);
+            String fullFilePath = currentRemoteDirectory + "/" + selectedFile;
+
+            // Check if the selected item is a directory
+            if (directoryContents != null) {
+                // Selected item is a directory, show a dialog to confirm directory download
+                showChooseDialog(fullFilePath);
+            }
+
+            // Return true to consume the long click event
+            return true;
+        });
+    }
+    // Define showChooseDialog() outside of any other methods
+    private void showChooseDialog(String fullFilePath) {
+        // Inflate the custom dialog layout
+        View dialogView = getLayoutInflater().inflate(R.layout.choose2, null);
+
+        // Find UI elements in the inflated layout
+        TextView titleTextView = dialogView.findViewById(R.id.dialog_title);
+        TextView messageTextView = dialogView.findViewById(R.id.dialog_message);
+        Button filePickerButton = dialogView.findViewById(R.id.filePickerButton);
+        Button finishButton = dialogView.findViewById(R.id.finishButton);
+        // Declare and initialize the remotePath variable
+
+        // Set content and behavior for the dialog elements
+        titleTextView.setText(String.format("%s%s", getString(R.string.download_directory2), fullFilePath));
+        messageTextView.setText(R.string.or_cancel2);
+
+        // Set click listeners for buttons
+        filePickerButton.setOnClickListener(view -> {
+            final Animation myAnim = AnimationUtils.loadAnimation(MainActivity2.this, R.anim.bounce);
+            filePickerButton.startAnimation(myAnim);
+            // Handle file picker button click
+            alertDialog.dismiss(); // Dismiss the dialog
+            String remoteDirectory = "";
+            downloadDirectory(fullFilePath, getLocalDownloadPath(remoteDirectory));
+        });
+
+        finishButton.setOnClickListener(view -> {
+            final Animation myAnim = AnimationUtils.loadAnimation(MainActivity2.this, R.anim.bounce);
+            finishButton.startAnimation(myAnim);
+            // Handle finish button click
+            alertDialog.dismiss();
+        });
+
+        // Create and show the AlertDialog with the custom layout
+        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity2.this);
+        builder.setView(dialogView);
+        alertDialog = builder.create();
+        alertDialog.show();
 
         // Check and request permission before initiating any file operations
         checkAndRequestPermission();
     }
 
+    private String getLocalDownloadPath(String remoteDirectory) {
+        // Customize this method to generate the local download path based on your requirements
+        // For example, you might want to use the remote directory name as the local folder name
+        String remoteDirectoryName = remoteDirectory.substring(remoteDirectory.lastIndexOf("/") + 1);
+        return Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS) + "/" + remoteDirectoryName;
+
+    }
     private void checkAndRequestPermission() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
                 != PackageManager.PERMISSION_GRANTED) {
@@ -208,11 +274,6 @@ public class MainActivity2 extends Activity {
             String savedPassword = getPassword(serverAddress, username);
             if (savedPassword != null) {
                 inputAutoComplete.setText(savedPassword);
-
-                Log.d("MainActivity2", "savedPassword1: " + savedPassword);
-                Log.d("MainActivity2", "serverAddress Status: " + serverAddress);
-                Log.d("MainActivity2", "username Status: " + username);
-                Log.d("MainActivity2", "savedPassword Status: " + inputAutoComplete.getText().toString());
             }
         }
 
@@ -278,6 +339,7 @@ public class MainActivity2 extends Activity {
             connectAndExecuteCommand();
         }
     }
+
     // Add a method to save the password to SharedPreferences
     private void savePassword() {
         SharedPreferences sharedPreferences = getSharedPreferences("SavedCredentials", MODE_PRIVATE);
@@ -300,7 +362,8 @@ public class MainActivity2 extends Activity {
     private Map<String, String> getPasswordsMap() {
         SharedPreferences sharedPreferences = getSharedPreferences("SavedCredentials", MODE_PRIVATE);
         String passwordsJson = sharedPreferences.getString("passwordsMap", "{}");
-        return new Gson().fromJson(passwordsJson, new TypeToken<Map<String, String>>() {}.getType());
+        return new Gson().fromJson(passwordsJson, new TypeToken<Map<String, String>>() {
+        }.getType());
     }
 
     private void savePasswordsMap(Map<String, String> passwordsMap) {
@@ -565,12 +628,13 @@ public class MainActivity2 extends Activity {
 
             boolean finalSuccess = success;
             List<String> finalDirectoryContents = directoryContents;
+            String fileName = filePath.substring(filePath.lastIndexOf("/") + 1);
 
             runOnUiThread(() -> {
                 MainActivity2 activity = activityReference.get();
                 if (activity != null && !activity.isFinishing()) {
                     if (finalSuccess) {
-                        GreenCustomToast.showCustomToast(activity.getApplicationContext(), "File downloaded: " + filePath);
+                        GreenCustomToast.showCustomToast(activity.getApplicationContext(), "File downloaded: " + fileName);
                     } else if (finalDirectoryContents != null) {
                         // If the clicked item was a directory, update the fileListView with its contents
                         activity.updateFileListView(finalDirectoryContents);
@@ -585,17 +649,19 @@ public class MainActivity2 extends Activity {
         });
     }
 
-    private void updateFileListView(List<String> directoryContents) {
+    private void updateFileListView(List<String> newDirectoryContents) {
         fileList.clear();  // Clear the list before adding new files
 
         // Use a case-insensitive comparator for sorting
-        directoryContents.sort(String.CASE_INSENSITIVE_ORDER);
+        if (newDirectoryContents != null) {
+            newDirectoryContents.sort(String.CASE_INSENSITIVE_ORDER);
 
-        // Add the "go up" item at the top
-        fileList.add(GO_UP);
+            // Add the "go up" item at the top
+            fileList.add(GO_UP);
 
-        // Add new files and directories
-        fileList.addAll(directoryContents);
+            // Add new files and directories
+            fileList.addAll(newDirectoryContents);
+        }
 
         CustomAdapter adapter = new CustomAdapter(MainActivity2.this, android.R.layout.simple_list_item_1, fileList, GO_UP);
         fileListView.setAdapter(adapter);
@@ -611,7 +677,7 @@ public class MainActivity2 extends Activity {
                 String fullFilePath = currentRemoteDirectory + "/" + selectedFile;
 
                 // Check if the selected item is a directory or a file
-                if (directoryContents.contains(selectedFile)) {
+                if (newDirectoryContents != null && newDirectoryContents.contains(selectedFile)) {
                     // Selected item is a directory, update the fileListView with its contents
                     downloadFile(fullFilePath);
                 } else {
@@ -639,12 +705,112 @@ public class MainActivity2 extends Activity {
         currentRemoteDirectory = newPath.toString();
         connectAndListDirectory();
     }
+    private void downloadDirectory(final String remotePath, final String localParentPath) {
+        Executor executor = Executors.newSingleThreadExecutor();
+        runOnUiThread(() -> progressBar.setVisibility(View.VISIBLE));
+        runOnUiThread(() -> spinner.setVisibility(View.VISIBLE));
+
+        executor.execute(() -> {
+            WeakReference<MainActivity2> activityReference = new WeakReference<>(MainActivity2.this);
+            boolean success = false;
+
+            try {
+                JSch jsch = new JSch();
+                Session session = jsch.getSession(username, serverAddress, 22);
+                session.setConfig("StrictHostKeyChecking", "no");
+                session.setPassword(password);
+                session.connect();
+
+                ChannelSftp channelSftp = (ChannelSftp) session.openChannel("sftp");
+                channelSftp.connect();
+
+                // Ensure we change to the correct remote directory
+                channelSftp.cd(remotePath);
+
+                // Get the list of files in the remote directory
+                Vector<ChannelSftp.LsEntry> fileList = channelSftp.ls("*");
+
+                // Extract the name of the remote directory
+                String remoteDirectoryName = new File(remotePath).getName();
+
+                // Create the local directory with the remote directory's name if it doesn't exist
+                Path localDirectoryPath = Paths.get(localParentPath, remoteDirectoryName);
+                Files.createDirectories(localDirectoryPath);
+
+                // Initialize progress variables for the entire directory
+                long totalSize = 0;
+                long downloadedSize = 0;
+
+                // Calculate the total size of all files for progress calculation
+                for (ChannelSftp.LsEntry entry : fileList) {
+                    totalSize += entry.getAttrs().getSize();
+                }
+
+                // Download each file in the remote directory
+                for (ChannelSftp.LsEntry entry : fileList) {
+                    String remoteFile = entry.getFilename();
+                    String localFile = localDirectoryPath + File.separator + remoteFile;
+
+                    // If the entry is a directory, recursively download it
+                    if (entry.getAttrs().isDir()) {
+                        downloadDirectory(remotePath + "/" + remoteFile, localDirectoryPath.toString());
+                    } else {
+                        // Set up a buffer for reading the file
+                        byte[] buffer = new byte[1024];
+                        int bytesRead;
+                        runOnUiThread(() -> spinner.setVisibility(View.VISIBLE));
+
+                        // Open an OutputStream to write the file locally
+                        try (OutputStream outputStream = Files.newOutputStream(Paths.get(localFile));
+                             InputStream inputStream = channelSftp.get(remoteFile)) {
+
+                            while ((bytesRead = inputStream.read(buffer)) > 0) {
+                                outputStream.write(buffer, 0, bytesRead);
+
+                                // Calculate and publish the download progress for the entire directory
+                                downloadedSize += bytesRead;
+                                int progress = (int) ((downloadedSize * 100) / totalSize);
+                                runOnUiThread(() -> spinner.setVisibility(View.VISIBLE));
+
+                                // Update the progress on the main (UI) thread
+                                runOnUiThread(() -> progressBar.setProgress(progress));
+                            }
+                        }
+                    }
+                }
+
+                // Disconnect the channel and session
+                channelSftp.disconnect();
+                session.disconnect();
+
+                success = true;
+            } catch (JSchException | SftpException | IOException e) {
+                e.printStackTrace();
+                runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "Error during directory download: " + e.getMessage()));
+            }
+
+            boolean finalSuccess = success;
+            runOnUiThread(() -> {
+                MainActivity2 activity = activityReference.get();
+                if (activity != null && !activity.isFinishing()) {
+                    if (finalSuccess) {
+                        GreenCustomToast.showCustomToast(activity.getApplicationContext(), "Directory downloaded: " + remotePath);
+                    } else {
+                        CustomToast.showCustomToast(activity.getApplicationContext(), "Directory download failed.");
+                    }
+                    progressBar.setProgress(0);
+                    progressBar.setVisibility(View.GONE);
+                    spinner.setVisibility(View.GONE);
+                }
+            });
+        });
+    }
 
     private void connectAndListDirectory() {
         Executor executor = Executors.newSingleThreadExecutor();
 
         executor.execute(() -> {
-            List<String> directoryContents = new ArrayList<>();
+            List<String> newDirectoryContents = new ArrayList<>();
 
             try {
                 JSch jsch = new JSch();
@@ -665,7 +831,7 @@ public class MainActivity2 extends Activity {
                 for (LsEntry entry : list) {
                     String entryName = entry.getFilename();
                     if (!entryName.equals(".") && !entryName.equals("..")) {
-                        directoryContents.add(entryName);
+                        newDirectoryContents.add(entryName);
                     }
                 }
 
@@ -677,7 +843,10 @@ public class MainActivity2 extends Activity {
                 runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "Error during directory listing: " + e.getMessage()));
             }
 
-            runOnUiThread(() -> updateFileListView(directoryContents));
+            runOnUiThread(() -> {
+                directoryContents = newDirectoryContents;  // Update the directoryContents variable
+                updateFileListView(directoryContents);
+            });
         });
     }
 }

@@ -42,28 +42,28 @@
         android:id="@+id/filePickerButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginTop="50dp"
+        android:layout_marginEnd="50dp"
         android:background="#00000000"
         android:clickable="true"
-        android:layout_marginStart="50dp"
-        android:layout_marginTop="50dp"
+        android:focusable="true"
         android:text="@string/choose_file1"
         android:textColor="@drawable/button_text_color"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/dialog_message"
-        android:focusable="true" />
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/dialog_message" />
 
     <Button
         android:id="@+id/finishButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginStart="50dp"
+        android:layout_marginTop="50dp"
         android:background="#00000000"
         android:clickable="true"
-        android:layout_marginTop="50dp"
-        android:layout_marginEnd="50dp"
+        android:focusable="true"
         android:text="@string/main_menu2"
         android:textColor="@drawable/button_text_color"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/dialog_message"
-        android:focusable="true" />
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@+id/dialog_message" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
