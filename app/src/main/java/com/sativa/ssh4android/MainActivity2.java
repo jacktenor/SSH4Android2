@@ -75,13 +75,12 @@ public class MainActivity2 extends Activity {
     private static final int REQUEST_WRITE_EXTERNAL_STORAGE = 1;
     private CheckBox savePasswordCheckbox;
     private View button;
-    private View spinner;
-
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main2);
+
         getWindow().setBackgroundDrawableResource(R.drawable.panther);
 
         button = findViewById(R.id.button);
@@ -90,7 +89,6 @@ public class MainActivity2 extends Activity {
         fileListView = findViewById(R.id.fileListView);
         progressBar = findViewById(R.id.progressBar);
         savePasswordCheckbox = findViewById(R.id.savePasswordCheckbox);
-        spinner = findViewById(R.id.spinner);
 
         inputAutoComplete.setInputType(InputType.TYPE_CLASS_TEXT);
 
@@ -100,7 +98,6 @@ public class MainActivity2 extends Activity {
             button.startAnimation(myAnim);
             startActivity(i);
         });
-
 
         inputAutoComplete.setOnKeyListener((v, keyCode, event) -> {
             if (keyCode == KeyEvent.KEYCODE_ENTER && event.getAction() == KeyEvent.ACTION_DOWN) {
@@ -136,18 +133,13 @@ public class MainActivity2 extends Activity {
         setNextQuestion();
 
         saveInputHistory(new ArrayList<>(inputHistory));
-
-        enterButton.setOnClickListener(view -> handleInput());
-
-
-
         fileList = new ArrayList<>();
         directoryContents = new ArrayList<>();  // Initialize as an empty list
 
+        enterButton.setOnClickListener(view -> handleInput());
         fileListView.setOnItemClickListener((parent, view, position, id) -> downloadFile(fileList.get(position)));
 
         // Add this block for handling long press on directory
-
         fileListView.setOnItemLongClickListener((parent, view, position, id) -> {
             String selectedFile = fileList.get(position);
             String fullFilePath = currentRemoteDirectory + "/" + selectedFile;
@@ -210,8 +202,8 @@ public class MainActivity2 extends Activity {
         // For example, you might want to use the remote directory name as the local folder name
         String remoteDirectoryName = remoteDirectory.substring(remoteDirectory.lastIndexOf("/") + 1);
         return Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS) + "/" + remoteDirectoryName;
-
     }
+
     private void checkAndRequestPermission() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
                 != PackageManager.PERMISSION_GRANTED) {
@@ -707,8 +699,6 @@ public class MainActivity2 extends Activity {
     }
     private void downloadDirectory(final String remotePath, final String localParentPath) {
         Executor executor = Executors.newSingleThreadExecutor();
-        runOnUiThread(() -> progressBar.setVisibility(View.VISIBLE));
-        runOnUiThread(() -> spinner.setVisibility(View.VISIBLE));
 
         executor.execute(() -> {
             WeakReference<MainActivity2> activityReference = new WeakReference<>(MainActivity2.this);
@@ -758,7 +748,6 @@ public class MainActivity2 extends Activity {
                         // Set up a buffer for reading the file
                         byte[] buffer = new byte[1024];
                         int bytesRead;
-                        runOnUiThread(() -> spinner.setVisibility(View.VISIBLE));
 
                         // Open an OutputStream to write the file locally
                         try (OutputStream outputStream = Files.newOutputStream(Paths.get(localFile));
@@ -770,7 +759,7 @@ public class MainActivity2 extends Activity {
                                 // Calculate and publish the download progress for the entire directory
                                 downloadedSize += bytesRead;
                                 int progress = (int) ((downloadedSize * 100) / totalSize);
-                                runOnUiThread(() -> spinner.setVisibility(View.VISIBLE));
+                                runOnUiThread(() -> progressBar.setVisibility(View.VISIBLE));
 
                                 // Update the progress on the main (UI) thread
                                 runOnUiThread(() -> progressBar.setProgress(progress));
@@ -794,13 +783,12 @@ public class MainActivity2 extends Activity {
                 MainActivity2 activity = activityReference.get();
                 if (activity != null && !activity.isFinishing()) {
                     if (finalSuccess) {
-                        GreenCustomToast.showCustomToast(activity.getApplicationContext(), "Directory downloaded: " + remotePath);
+                        ShortCustomToast.showCustomToast(activity.getApplicationContext(), "Directory downloaded: " + remotePath);
                     } else {
                         CustomToast.showCustomToast(activity.getApplicationContext(), "Directory download failed.");
                     }
                     progressBar.setProgress(0);
                     progressBar.setVisibility(View.GONE);
-                    spinner.setVisibility(View.GONE);
                 }
             });
         });

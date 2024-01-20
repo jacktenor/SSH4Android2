@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/short_green_toast_layout_root"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:background="@android:color/black"
+    android:padding="8dp">
+
+    <TextView
+        android:id="@+id/short_green_toast_text"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="#5FFB17"
+        android:gravity="center_horizontal"
+        android:textSize="20sp" />
+
+</LinearLayout>
