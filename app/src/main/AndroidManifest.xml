@@ -1,13 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest
-    xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.INTERNET" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" />
-    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
-    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO"/>
-    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO"/>
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
+    <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
 
     <application
         android:allowBackup="true"
@@ -17,25 +16,29 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.SSH4Android">
-
+        <activity
+            android:name=".MainActivity5"
+            android:exported="true"
+            android:theme="@style/ListFont"
+            android:windowSoftInputMode="adjustNothing" />
         <activity
             android:name=".MainActivity4"
-            android:windowSoftInputMode="adjustNothing"
-            android:exported="true" />
+            android:exported="true"
+            android:windowSoftInputMode="adjustNothing" />
         <activity
             android:name=".MainActivity3"
-            android:windowSoftInputMode="adjustNothing"
             android:exported="true"
-            android:theme="@style/ListFont"/>
+            android:theme="@style/ListFont"
+            android:windowSoftInputMode="adjustNothing" />
         <activity
             android:name=".MainActivity2"
-            android:windowSoftInputMode="adjustNothing"
             android:exported="true"
-            android:theme="@style/ListFont" />
+            android:theme="@style/ListFont"
+            android:windowSoftInputMode="adjustNothing" />
         <activity
             android:name=".MainActivity"
-            android:windowSoftInputMode="adjustNothing"
-            android:exported="true">
+            android:exported="true"
+            android:windowSoftInputMode="adjustNothing">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -43,4 +46,5 @@
             </intent-filter>
         </activity>
     </application>
+
 </manifest>

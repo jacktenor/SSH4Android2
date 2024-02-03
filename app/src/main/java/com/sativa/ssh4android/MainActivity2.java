@@ -35,6 +35,8 @@ import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
 import com.jcraft.jsch.SftpATTRS;
 import com.jcraft.jsch.SftpException;
+import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
+import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -53,6 +55,7 @@ import java.util.Vector;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.zip.GZIPOutputStream;
 
 public class MainActivity2 extends Activity {
     private AutoCompleteTextView inputAutoComplete;
@@ -65,7 +68,6 @@ public class MainActivity2 extends Activity {
     private List<String> directoryContents;
     private String serverAddress;
     private String password;
-    private String command;
     private List<String> fileList;
     private AlertDialog alertDialog;
     private String currentRemoteDirectory = ".";
@@ -75,6 +77,7 @@ public class MainActivity2 extends Activity {
     private static final int REQUEST_WRITE_EXTERNAL_STORAGE = 1;
     private CheckBox savePasswordCheckbox;
     private View button;
+    private final String command = "ls";
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -93,9 +96,9 @@ public class MainActivity2 extends Activity {
         inputAutoComplete.setInputType(InputType.TYPE_CLASS_TEXT);
 
         button.setOnClickListener(view -> {
-            Intent i = new Intent(MainActivity2.this, MainActivity.class);
             final Animation myAnim = AnimationUtils.loadAnimation(this, R.anim.bounce);
             button.startAnimation(myAnim);
+            Intent i = new Intent(MainActivity2.this, MainActivity.class);
             startActivity(i);
         });
 
@@ -127,7 +130,6 @@ public class MainActivity2 extends Activity {
         questions.add("SSH server address?");
         questions.add("Username?");
         questions.add("Password?");
-        questions.add("Command?");
 
         currentQuestionIndex = 0;
         setNextQuestion();
@@ -137,10 +139,17 @@ public class MainActivity2 extends Activity {
         directoryContents = new ArrayList<>();  // Initialize as an empty list
 
         enterButton.setOnClickListener(view -> handleInput());
+        final Animation myAnim = AnimationUtils.loadAnimation(this, R.anim.bounce);
+        enterButton.startAnimation(myAnim);
+
         fileListView.setOnItemClickListener((parent, view, position, id) -> downloadFile(fileList.get(position)));
+        final Animation myAnim2 = AnimationUtils.loadAnimation(this, R.anim.bounce);
+        fileListView.startAnimation(myAnim2);
 
         // Add this block for handling long press on directory
         fileListView.setOnItemLongClickListener((parent, view, position, id) -> {
+            final Animation myAnim3 = AnimationUtils.loadAnimation(this, R.anim.bounce);
+            fileListView.startAnimation(myAnim3);
             String selectedFile = fileList.get(position);
             String fullFilePath = currentRemoteDirectory + "/" + selectedFile;
 
@@ -163,6 +172,7 @@ public class MainActivity2 extends Activity {
         TextView titleTextView = dialogView.findViewById(R.id.dialog_title);
         TextView messageTextView = dialogView.findViewById(R.id.dialog_message);
         Button filePickerButton = dialogView.findViewById(R.id.filePickerButton);
+        Button uncompressedButton = dialogView.findViewById(R.id.uncompressedButton);
         Button finishButton = dialogView.findViewById(R.id.finishButton);
         // Declare and initialize the remotePath variable
 
@@ -177,7 +187,7 @@ public class MainActivity2 extends Activity {
             // Handle file picker button click
             alertDialog.dismiss(); // Dismiss the dialog
             String remoteDirectory = "";
-            downloadDirectory(fullFilePath, getLocalDownloadPath(remoteDirectory));
+            downloadCompressedDirectory(fullFilePath, getLocalDownloadPath(remoteDirectory));
         });
 
         finishButton.setOnClickListener(view -> {
@@ -185,6 +195,16 @@ public class MainActivity2 extends Activity {
             finishButton.startAnimation(myAnim);
             // Handle finish button click
             alertDialog.dismiss();
+        });
+
+        uncompressedButton.setOnClickListener(view -> {
+            final Animation myAnim = AnimationUtils.loadAnimation(MainActivity2.this, R.anim.bounce);
+            uncompressedButton.startAnimation(myAnim);
+            // Handle finish button click
+            alertDialog.dismiss();
+            String remoteDirectory = "";
+            downloadDirectory(fullFilePath, getLocalDownloadPath(remoteDirectory));
+
         });
 
         // Create and show the AlertDialog with the custom layout
@@ -317,17 +337,12 @@ public class MainActivity2 extends Activity {
                 savePasswordCheckbox.setVisibility(View.GONE);
                 inputAutoComplete.setInputType(InputType.TYPE_CLASS_TEXT);
                 break;
-            case 3:
-                command = input;
-                break;
         }
 
         if (currentQuestionIndex < questions.size()) {
             // Set next question
             setNextQuestion();
         } else {
-            // All questions answered, initiate connection and command execution
-
             connectAndExecuteCommand();
         }
     }
@@ -391,10 +406,8 @@ public class MainActivity2 extends Activity {
             } catch (JSchException ex) {
                 if (session != null) {
                     hostKey = session.getHostKey().getFingerPrint(null);
-                }
-            } finally {
-                if (session != null) {
-                    session.disconnect();
+                } else {
+                    runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "Host key error."));
                 }
             }
 
@@ -404,7 +417,7 @@ public class MainActivity2 extends Activity {
                     // Show the host key dialog for verification
                     showHostKeyDialog(finalHostKey);
                 } else {
-                    CustomToast.showCustomToast(getApplicationContext(), "Host key error.");
+                    runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "Host key error."));
                 }
             });
         });
@@ -441,7 +454,6 @@ public class MainActivity2 extends Activity {
             // Handle host key denial
             // Show a message or take appropriate action
             alertDialog.dismiss(); // Dismiss the dialog
-
             runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "Host key denied."));
         });
 
@@ -474,7 +486,9 @@ public class MainActivity2 extends Activity {
                 session.setPassword(activity.password);
                 session.connect();
 
+
                 ChannelExec channelExec = (ChannelExec) session.openChannel("exec");
+
                 channelExec.setCommand(activity.command);
 
                 InputStream in = channelExec.getInputStream();
@@ -509,18 +523,18 @@ public class MainActivity2 extends Activity {
                     if (finalSuccess) {
                         finalActivity.displayOutput(output.toString());
                     } else {
-                        CustomToast.showCustomToast(getApplicationContext(), "Connection failed");
+                        runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "Connection failed"));
                     }
                 }
             });
         });
 
-        fileListView.setVisibility(VISIBLE);
-        inputAutoComplete.setText("");
-        inputAutoComplete.setEnabled(false);
-        enterButton.setEnabled(false);
-        inputAutoComplete.setVisibility(View.GONE);
-        enterButton.setVisibility(View.GONE);
+        runOnUiThread(() ->  inputAutoComplete.setText(""));
+        runOnUiThread(() ->  inputAutoComplete.setVisibility(View.GONE));
+        runOnUiThread(() ->  inputAutoComplete.setEnabled(false));
+        runOnUiThread(() ->  enterButton.setEnabled(false));
+        runOnUiThread(() ->  enterButton.setVisibility(View.GONE));
+        runOnUiThread(() ->  fileListView.setVisibility(VISIBLE));
     }
 
     private void displayOutput(String output) {
@@ -534,14 +548,11 @@ public class MainActivity2 extends Activity {
     }
 
     private void downloadFile(final String filePath) {
-        // Use the activityReference field
         Executor executor = Executors.newSingleThreadExecutor();
-        progressBar.setVisibility(VISIBLE);
 
         executor.execute(() -> {
             WeakReference<MainActivity2> activityReference = new WeakReference<>(MainActivity2.this);
             List<String> directoryContents = null;
-            long fileSize;
             boolean success = false;
 
             try {
@@ -558,11 +569,11 @@ public class MainActivity2 extends Activity {
 
                 // Check if the clicked item is a directory
                 if (attrs.isDir()) {
-
                     // Update the fileListView with the contents of the clicked directory
                     channelSftp.cd(filePath);
                     currentRemoteDirectory = channelSftp.pwd();
                     Vector<LsEntry> rawList = channelSftp.ls("*");
+
                     List<LsEntry> list = new ArrayList<>(rawList);
 
                     directoryContents = new ArrayList<>();
@@ -576,7 +587,7 @@ public class MainActivity2 extends Activity {
                     // The clicked item is a file, proceed with downloading
 
                     // Get the file size for progress calculation
-                    fileSize = attrs.getSize();
+                    long fileSize = attrs.getSize();
 
                     // Set up a buffer for reading the file
                     byte[] buffer = new byte[1024];
@@ -594,44 +605,140 @@ public class MainActivity2 extends Activity {
 
                         while ((bytesRead = inputStream.read(buffer)) > 0) {
                             outputStream.write(buffer, 0, bytesRead);
+                            runOnUiThread(() -> progressBar.setVisibility(VISIBLE));
 
                             // Calculate and publish the download progress
                             downloadedSize += bytesRead;
                             int progress = (int) ((downloadedSize * 100) / fileSize);
                             runOnUiThread(() -> progressBar.setProgress(progress));
                         }
+
                         // Close the streams
                         inputStream.close();
-
                         success = true;
                     } catch (IOException | SftpException e) {
                         e.printStackTrace();
-                        runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "Error during file download: " + e.getMessage()));
+                        runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "Directory download error: " + e.getMessage()));
                     }
                 }
 
                 // Disconnect the channel and session
                 channelSftp.disconnect();
                 session.disconnect();
+
+                boolean finalSuccess = success;
+                List<String> finalDirectoryContents = directoryContents;
+                String fileName = filePath.substring(filePath.lastIndexOf("/") + 1);
+
+                runOnUiThread(() -> {
+                    MainActivity2 activity = activityReference.get();
+                    if (activity != null && !activity.isFinishing()) {
+                        if (finalSuccess) {
+                            runOnUiThread(() -> GreenCustomToast.showCustomToast(activity.getApplicationContext(), "File downloaded: " + fileName));
+                        } else if (finalDirectoryContents != null) {
+                            // If the clicked item was a directory, update the fileListView with its contents
+                            activity.updateFileListView(finalDirectoryContents);
+                        } else {
+                            runOnUiThread(() -> CustomToast.showCustomToast(activity.getApplicationContext(), "Download or directory traversal failed."));
+                        }
+
+                        runOnUiThread(() -> progressBar.setProgress(0));
+                        runOnUiThread(() -> progressBar.setVisibility(View.GONE));
+                    }
+                });
             } catch (JSchException | SftpException e) {
                 e.printStackTrace();
-                runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "Error during file download: " + e.getMessage()));
+                runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), ""));//todo
+            }
+        });
+    }
+    private void downloadDirectory(final String remotePath, final String localParentPath) {
+        Executor executor = Executors.newSingleThreadExecutor();
+
+        executor.execute(() -> {
+            WeakReference<MainActivity2> activityReference = new WeakReference<>(MainActivity2.this);
+            boolean success = false;
+
+            try {
+                JSch jsch = new JSch();
+                Session session = jsch.getSession(username, serverAddress, 22);
+                session.setConfig("StrictHostKeyChecking", "no");
+                session.setPassword(password);
+                session.connect();
+
+                ChannelSftp channelSftp = (ChannelSftp) session.openChannel("sftp");
+                channelSftp.connect();
+
+                // Ensure we change to the correct remote directory
+                channelSftp.cd(remotePath);
+
+                // Get the list of files in the remote directory
+                Vector<ChannelSftp.LsEntry> fileList = channelSftp.ls("*");
+
+                // Extract the name of the remote directory
+                String remoteDirectoryName = new File(remotePath).getName();
+
+                // Create the local directory with the remote directory's name if it doesn't exist
+                Path localDirectoryPath = Paths.get(localParentPath, remoteDirectoryName);
+                Files.createDirectories(localDirectoryPath);
+
+                // Initialize progress variables for the entire directory
+                long totalSize = 0;
+                long downloadedSize = 0;
+
+                // Calculate the total size of all files for progress calculation
+                for (ChannelSftp.LsEntry entry : fileList) {
+                    totalSize += entry.getAttrs().getSize();
+                }
+
+                // Download each file in the remote directory
+                for (ChannelSftp.LsEntry entry : fileList) {
+                    String remoteFile = entry.getFilename();
+                    String localFile = localDirectoryPath + File.separator + remoteFile;
+
+                    // If the entry is a directory, recursively download it
+                    if (entry.getAttrs().isDir()) {
+                        downloadDirectory(remotePath + "/" + remoteFile, localDirectoryPath.toString());
+                    } else {
+                        // Set up a buffer for reading the file
+                        byte[] buffer = new byte[1024];
+                        int bytesRead;
+                        runOnUiThread(() -> progressBar.setVisibility(VISIBLE));
+
+                        // Open an OutputStream to write the file locally
+                        try (OutputStream outputStream = Files.newOutputStream(Paths.get(localFile));
+                             InputStream inputStream = channelSftp.get(remoteFile)) {
+
+                            while ((bytesRead = inputStream.read(buffer)) > 0) {
+                                outputStream.write(buffer, 0, bytesRead);
+
+                                // Calculate and publish the download progress for the entire directory
+                                downloadedSize += bytesRead;
+                                int progress = (int) ((downloadedSize * 100) / totalSize);
+                                runOnUiThread(() -> progressBar.setProgress(progress));
+                            }
+                        }
+                    }
+                }
+
+                // Disconnect the channel and session
+                channelSftp.disconnect();
+                session.disconnect();
+
+                success = true;
+            } catch (JSchException | SftpException | IOException e) {
+                e.printStackTrace();
+                runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "Error during directory download: " + e.getMessage()));
             }
 
             boolean finalSuccess = success;
-            List<String> finalDirectoryContents = directoryContents;
-            String fileName = filePath.substring(filePath.lastIndexOf("/") + 1);
-
             runOnUiThread(() -> {
                 MainActivity2 activity = activityReference.get();
                 if (activity != null && !activity.isFinishing()) {
                     if (finalSuccess) {
-                        GreenCustomToast.showCustomToast(activity.getApplicationContext(), "File downloaded: " + fileName);
-                    } else if (finalDirectoryContents != null) {
-                        // If the clicked item was a directory, update the fileListView with its contents
-                        activity.updateFileListView(finalDirectoryContents);
+                        GreenCustomToast.showCustomToast(activity.getApplicationContext(), "Directory downloaded: " + remotePath);
                     } else {
-                        CustomToast.showCustomToast(activity.getApplicationContext(), "Download or directory traversal failed.");
+                        CustomToast.showCustomToast(activity.getApplicationContext(), "Directory download failed.");
                     }
 
                     progressBar.setProgress(0);
@@ -640,6 +747,7 @@ public class MainActivity2 extends Activity {
             });
         });
     }
+
 
     private void updateFileListView(List<String> newDirectoryContents) {
         fileList.clear();  // Clear the list before adding new files
@@ -697,7 +805,7 @@ public class MainActivity2 extends Activity {
         currentRemoteDirectory = newPath.toString();
         connectAndListDirectory();
     }
-    private void downloadDirectory(final String remotePath, final String localParentPath) {
+    private void downloadCompressedDirectory(final String remotePath, final String localParentPath) {
         Executor executor = Executors.newSingleThreadExecutor();
 
         executor.execute(() -> {
@@ -714,11 +822,11 @@ public class MainActivity2 extends Activity {
                 ChannelSftp channelSftp = (ChannelSftp) session.openChannel("sftp");
                 channelSftp.connect();
 
-                // Ensure we change to the correct remote directory
+                // Navigate into the selected remote directory
                 channelSftp.cd(remotePath);
 
-                // Get the list of files in the remote directory
-                Vector<ChannelSftp.LsEntry> fileList = channelSftp.ls("*");
+                // Navigate back out to the original directory
+                channelSftp.cd("..");
 
                 // Extract the name of the remote directory
                 String remoteDirectoryName = new File(remotePath).getName();
@@ -727,46 +835,15 @@ public class MainActivity2 extends Activity {
                 Path localDirectoryPath = Paths.get(localParentPath, remoteDirectoryName);
                 Files.createDirectories(localDirectoryPath);
 
-                // Initialize progress variables for the entire directory
-                long totalSize = 0;
-                long downloadedSize = 0;
+                // Create the local compressed file path
+                String compressedFileName = remoteDirectoryName + ".tar.gz";
+                String compressedFilePath = localParentPath + File.separator + compressedFileName;
 
-                // Calculate the total size of all files for progress calculation
-                for (ChannelSftp.LsEntry entry : fileList) {
-                    totalSize += entry.getAttrs().getSize();
-                }
+                // Compress the remote directory
+                compressDirectory(remotePath, compressedFilePath, channelSftp);
 
-                // Download each file in the remote directory
-                for (ChannelSftp.LsEntry entry : fileList) {
-                    String remoteFile = entry.getFilename();
-                    String localFile = localDirectoryPath + File.separator + remoteFile;
-
-                    // If the entry is a directory, recursively download it
-                    if (entry.getAttrs().isDir()) {
-                        downloadDirectory(remotePath + "/" + remoteFile, localDirectoryPath.toString());
-                    } else {
-                        // Set up a buffer for reading the file
-                        byte[] buffer = new byte[1024];
-                        int bytesRead;
-
-                        // Open an OutputStream to write the file locally
-                        try (OutputStream outputStream = Files.newOutputStream(Paths.get(localFile));
-                             InputStream inputStream = channelSftp.get(remoteFile)) {
-
-                            while ((bytesRead = inputStream.read(buffer)) > 0) {
-                                outputStream.write(buffer, 0, bytesRead);
-
-                                // Calculate and publish the download progress for the entire directory
-                                downloadedSize += bytesRead;
-                                int progress = (int) ((downloadedSize * 100) / totalSize);
-                                runOnUiThread(() -> progressBar.setVisibility(View.VISIBLE));
-
-                                // Update the progress on the main (UI) thread
-                                runOnUiThread(() -> progressBar.setProgress(progress));
-                            }
-                        }
-                    }
-                }
+                // Download the compressed archive
+                downloadFile(compressedFilePath);
 
                 // Disconnect the channel and session
                 channelSftp.disconnect();
@@ -775,7 +852,7 @@ public class MainActivity2 extends Activity {
                 success = true;
             } catch (JSchException | SftpException | IOException e) {
                 e.printStackTrace();
-                runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "Error during directory download: " + e.getMessage()));
+                runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "Error during directory compression/download: " + e.getMessage()));
             }
 
             boolean finalSuccess = success;
@@ -783,15 +860,82 @@ public class MainActivity2 extends Activity {
                 MainActivity2 activity = activityReference.get();
                 if (activity != null && !activity.isFinishing()) {
                     if (finalSuccess) {
-                        ShortCustomToast.showCustomToast(activity.getApplicationContext(), "Directory downloaded: " + remotePath);
+                        GreenCustomToast.showCustomToast(activity.getApplicationContext(), "Directory downloaded: " + remotePath);
                     } else {
                         CustomToast.showCustomToast(activity.getApplicationContext(), "Directory download failed.");
                     }
-                    progressBar.setProgress(0);
-                    progressBar.setVisibility(View.GONE);
+                    runOnUiThread(() -> progressBar.setProgress(0));  // Set progress to 0 upon completion
+                    runOnUiThread(() -> progressBar.setVisibility(View.GONE));
                 }
             });
         });
+    }
+
+    private void compressDirectory(String remotePath, String compressedFilePath, ChannelSftp channelSftp) {
+        try (TarArchiveOutputStream tarArchiveOutputStream = new TarArchiveOutputStream(new GZIPOutputStream(Files.newOutputStream(Paths.get(compressedFilePath))))) {
+            // Get the total number of files in the remote directory
+            Vector<ChannelSftp.LsEntry> fileList = channelSftp.ls(remotePath + "/*");
+
+            // Set the maximum progress value for the entire directory
+            int totalFiles = fileList.size();
+            int maxProgress = totalFiles * 100;
+
+            // Update progress for directory compression start
+            runOnUiThread(() -> progressBar.setProgress(0));
+            compressDirectoryRecursive(remotePath, "", tarArchiveOutputStream, channelSftp, maxProgress);
+            tarArchiveOutputStream.finish();
+        } catch (IOException | SftpException e) {
+            e.printStackTrace();
+            runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "Error during directory compression: " + e.getMessage()));
+        }
+    }
+
+    private void compressDirectoryRecursive(String remotePath, String relativePath, TarArchiveOutputStream tarArchiveOutputStream, ChannelSftp channelSftp, int maxProgress) throws IOException, SftpException {
+        // Get the list of files in the remote directory
+        Vector<ChannelSftp.LsEntry> fileList = channelSftp.ls(remotePath + "/*");
+
+        // Initialize progress variables
+        int currentProgress = 0;
+        int cumulativeProgress;
+
+        for (int i = 0; i < fileList.size(); i++) {
+            ChannelSftp.LsEntry entry = fileList.get(i);
+            String remoteFile = entry.getFilename();
+            String remoteFilePath = remotePath + "/" + remoteFile;
+
+            // Create a TarArchiveEntry for each file in the directory
+            TarArchiveEntry tarEntry = new TarArchiveEntry(relativePath + remoteFile);
+            tarEntry.setSize(entry.getAttrs().getSize());
+
+
+            if (entry.getAttrs().isDir()) {
+                // If it's a directory, recursively compress its content
+                compressDirectoryRecursive(remoteFilePath, relativePath + remoteFile + "/", tarArchiveOutputStream, channelSftp, maxProgress);
+            } else {
+                try (InputStream inputStream = channelSftp.get(remoteFilePath)) {
+                    // Put the entry in the tar archive
+                    tarArchiveOutputStream.putArchiveEntry(tarEntry);
+
+                    // Write the file content to the tar archive
+                    byte[] buffer = new byte[1024];
+                    int bytesRead;
+                    while ((bytesRead = inputStream.read(buffer)) != -1) {
+                        tarArchiveOutputStream.write(buffer, 0, bytesRead);
+                    }
+                    // Close the current entry
+                    tarArchiveOutputStream.closeArchiveEntry();
+                }
+            }
+
+            runOnUiThread(() -> progressBar.setVisibility(VISIBLE));
+
+            // Update progress for each file processed
+            currentProgress++;
+            cumulativeProgress = currentProgress * 100 / fileList.size();
+            int finalCumulativeProgress = cumulativeProgress;
+            runOnUiThread(() -> progressBar.setProgress(Math.min(finalCumulativeProgress, maxProgress)));
+
+        }
     }
 
     private void connectAndListDirectory() {

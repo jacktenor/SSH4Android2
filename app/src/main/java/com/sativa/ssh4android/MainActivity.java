@@ -21,11 +21,13 @@ public class MainActivity extends Activity {
         Button button2 = findViewById(R.id.button2);
         Button button3 = findViewById(R.id.button3);
         Button button4 = findViewById(R.id.button4);
+        Button button5 = findViewById(R.id.button5);
 
         button.setBackgroundColor(Color.TRANSPARENT);
         button2.setBackgroundColor(Color.TRANSPARENT);
         button3.setBackgroundColor(Color.TRANSPARENT);
         button4.setBackgroundColor(Color.TRANSPARENT);
+        button5.setBackgroundColor(Color.TRANSPARENT);
 
 
         button.setOnClickListener(view -> {
@@ -43,25 +45,32 @@ public class MainActivity extends Activity {
         });
 
         button3.setOnClickListener(view -> {
-            Intent i = new Intent(MainActivity.this, MainActivity4.class);
+            Intent i = new Intent(MainActivity.this, MainActivity5.class);
             final Animation myAnim = AnimationUtils.loadAnimation(this, R.anim.bounce);
             button3.startAnimation(myAnim);
             startActivity(i);
         });
 
-        button4.setOnClickListener(v -> {
+        button4.setOnClickListener(view -> {
+            Intent i = new Intent(MainActivity.this, MainActivity4.class);
+            final Animation myAnim = AnimationUtils.loadAnimation(this, R.anim.bounce);
+            button4.startAnimation(myAnim);
+            startActivity(i);
+        });
+
+        button5.setOnClickListener(view -> {
             if (!isSureButtonClicked) {
                 // First click, change the label to "ARE YOU SURE?"
 
-                button4.setTextColor( Color.RED );
-                button4.setText("ARE YOU\n SURE?");
+                button5.setTextColor( Color.RED );
+                button5.setText("ARE YOU\n SURE?");
                 isSureButtonClicked = true;
             } else {
                 // Second click, clear input history
                 clearInputHistory();
                 // Reset the label to the original text
-                button4.setTextColor( Color.WHITE );
-                button4.setText(" Clear History\nAnd Password?");
+                button5.setTextColor( Color.WHITE );
+                button5.setText(" Clear History\nAnd Password?");
                 isSureButtonClicked = false;
             }
         });
