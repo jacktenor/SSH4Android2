@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<androidx.constraintlayout.widget.ConstraintLayout
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".MainActivity5">
+    tools:context=".MainActivity5"
+    tools:layout_editor_absoluteY="25dp">
 
     <Button
         android:id="@+id/enterButton"
@@ -30,7 +30,7 @@
         android:completionThreshold="1"
         android:hint="@string/ssh_server_address5"
         android:inputType="text"
-        android:minWidth="150sp"
+        android:minWidth="10sp"
         android:minHeight="50dp"
         android:popupBackground="#00FFFFFF"
         android:textAlignment="center"
@@ -39,19 +39,6 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
-
-    <CheckBox
-        android:id="@+id/savePasswordCheckbox"
-        android:layout_width="wrap_content"
-        android:layout_height="50dp"
-        android:layout_marginTop="125dp"
-        android:buttonTint="#757575"
-        android:text="@string/save_npassword3"
-        android:textColor="#FFFFFF"
-        android:visibility="gone"
-        app:layout_constraintStart_toEndOf="@+id/inputAutoComplete"
-        app:layout_constraintTop_toTopOf="parent"
-        tools:visibility="gone" />
 
     <Button
         android:id="@+id/button"
@@ -102,11 +89,11 @@
             android:scrollbarStyle="outsideInset"
             android:scrollbars="vertical"
             android:text="@string/output"
-            android:textIsSelectable="true"
             android:textAlignment="center"
             android:textColor="#FFFFFF"
-            android:textColorHighlight="#034C61"
+            android:textColorHighlight="#757575"
             android:textColorHint="#757575"
+            android:textIsSelectable="true"
             android:textSize="16sp"
             android:verticalScrollbarPosition="right"
             android:visibility="gone" />
@@ -123,5 +110,19 @@
         android:textColor="#FFFFFF"
         app:layout_constraintBottom_toTopOf="@+id/textView2"
         app:layout_constraintEnd_toEndOf="parent" />
+
+    <CheckBox
+        android:id="@+id/savePasswordCheckbox"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="125dp"
+        android:buttonTint="#757575"
+        android:drawableTint="#757575"
+        android:text="@string/save_npassword22"
+        android:textAlignment="viewStart"
+        android:textColor="#FFFFFF"
+        android:visibility="gone"
+        app:layout_constraintStart_toEndOf="@+id/inputAutoComplete"
+        app:layout_constraintTop_toTopOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

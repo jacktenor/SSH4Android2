@@ -1,25 +1,20 @@
 package com.sativa.ssh4android;
 
 import static java.lang.Thread.sleep;
-
 import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.content.ClipData;
-import android.content.ClipboardManager;
-import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.graphics.Rect;
 import android.os.Bundle;
 import android.text.InputType;
-import android.view.ContextMenu;
-import android.view.ContextThemeWrapper;
 import android.view.KeyEvent;
-import android.view.MenuInflater;
-import android.view.MenuItem;
+import android.view.TouchDelegate;
 import android.view.View;
-import android.view.WindowManager;
+import android.view.ViewTreeObserver;
+import android.view.WindowManager.LayoutParams;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.view.inputmethod.InputMethodManager;
@@ -28,18 +23,15 @@ import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.TextView;
-
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.jcraft.jsch.ChannelExec;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.lang.ref.WeakReference;
@@ -76,9 +68,6 @@ public class MainActivity5 extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main5);
 
-        getWindow().setBackgroundDrawableResource(R.drawable.panther);
-
-        // Register outputTextView for context menu
 
         button6 = findViewById(R.id.button6);
         button = findViewById(R.id.button);
@@ -88,13 +77,12 @@ public class MainActivity5 extends Activity {
         outputTextView = findViewById(R.id.outputTextView);
         textView2 = findViewById(R.id.textView2);
 
+        getWindow().setBackgroundDrawableResource(R.drawable.panther);
+
         inputAutoComplete.setInputType(InputType.TYPE_CLASS_TEXT);
 
-        // Register outputTextView for context menu
-        registerForContextMenu(outputTextView);
-
         inputAutoComplete.requestFocus();
-        getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_VISIBLE);
+        getWindow().setSoftInputMode(LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE);
 
         runOnUiThread(() -> button6.setVisibility(View.GONE));
         runOnUiThread(() -> button.setVisibility(View.GONE));
@@ -222,13 +210,12 @@ public class MainActivity5 extends Activity {
             inputAutoComplete.setAdapter(null);
         }
     }
-
     private void updateInputHistory(String newInput) {
         inputHistory.add(newInput);
         saveInputHistory(new ArrayList<>(inputHistory));
     }
 
-    private void handleInput() {
+        private void handleInput() {
         String input = inputAutoComplete.getText().toString();
 
         // Update input history
@@ -256,8 +243,8 @@ public class MainActivity5 extends Activity {
                 if (savePassword.get()) {
                     savePassword();
                 }
-                inputAutoComplete.setText("");
                 savePasswordCheckbox.setVisibility(View.GONE);
+                inputAutoComplete.setText("");
                 inputAutoComplete.setInputType(InputType.TYPE_CLASS_TEXT);
                 break;
             case 3:
@@ -281,6 +268,7 @@ public class MainActivity5 extends Activity {
             enterButton.setVisibility(View.GONE);
 
             connectAndExecuteCommand();
+
         }
     }
 
@@ -401,7 +389,6 @@ public class MainActivity5 extends Activity {
         alertDialog.show();
     }
 
-
     private void connectAndExecuteCommand2() {
         Executor executor = Executors.newSingleThreadExecutor();
 
@@ -459,45 +446,45 @@ public class MainActivity5 extends Activity {
                 session.disconnect();
 
                 runOnUiThread(() -> {
-                            button6.setVisibility(View.VISIBLE);
-                            button.setVisibility(View.VISIBLE);
-                            textView2.setVisibility(View.VISIBLE);
+                    button6.setVisibility(View.VISIBLE);
+                    button.setVisibility(View.VISIBLE);
+                    textView2.setVisibility(View.VISIBLE);
 
 
-                            button6.setOnClickListener(view -> {
-                                final Animation myAnim = AnimationUtils.loadAnimation(MainActivity5.this, R.anim.bounce);
-                                button6.startAnimation(myAnim);
+                    button6.setOnClickListener(view -> {
+                        final Animation myAnim = AnimationUtils.loadAnimation(MainActivity5.this, R.anim.bounce);
+                        button6.startAnimation(myAnim);
 
-                                // Clear previous output and prepare for a new command
-                                output.setLength(0);
+                        // Clear previous output and prepare for a new command
+                        output.setLength(0);
 
-                                // Clear previous output in the UI
-                                activity.runOnUiThread(() -> {
-                                    activity.outputTextView.setText("");
-                                    outputTextView.setText("");
-                                    activity.outputTextView.setVisibility(View.GONE);
+                        // Clear previous output in the UI
+                        activity.runOnUiThread(() -> {
+                            activity.outputTextView.setText("");
+                            outputTextView.setText("");
+                            activity.outputTextView.setVisibility(View.GONE);
 
-                                    // Optionally, reset other variables related to the previous command
-                                    command = "";
-                                    enterButton.setVisibility(View.VISIBLE);
+                            // Optionally, reset other variables related to the previous command
+                            command = "";
+                            enterButton.setVisibility(View.VISIBLE);
 
-                                    // Show inputAutoComplete and request focus
-                                    inputAutoComplete.setVisibility(View.VISIBLE);
-                                    inputAutoComplete.requestFocus();
+                            // Show inputAutoComplete and request focus
+                            inputAutoComplete.setVisibility(View.VISIBLE);
+                            inputAutoComplete.requestFocus();
 
-                                    // Show the keyboard
-                                    InputMethodManager imm = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
-                                    if (imm != null) {
-                                        imm.showSoftInput(inputAutoComplete, InputMethodManager.SHOW_IMPLICIT);
-                                    }
+                            // Show the keyboard
+                            InputMethodManager imm = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+                            if (imm != null) {
+                                imm.showSoftInput(inputAutoComplete, InputMethodManager.SHOW_IMPLICIT);
+                            }
 
-                                    // Dismiss the dialog if it's showing
-                                    if (alertDialog != null && alertDialog.isShowing()) {
-                                        alertDialog.dismiss();
-                                    }
-                                });
-                            });
+                            // Dismiss the dialog if it's showing
+                            if (alertDialog != null && alertDialog.isShowing()) {
+                                alertDialog.dismiss();
+                            }
                         });
+                    });
+                });
 
                 success = true;
             } catch (JSchException | IOException | InterruptedException e) {
