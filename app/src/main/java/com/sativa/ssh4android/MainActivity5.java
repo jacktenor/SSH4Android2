@@ -7,13 +7,10 @@ import android.app.AlertDialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.graphics.Rect;
 import android.os.Bundle;
 import android.text.InputType;
 import android.view.KeyEvent;
-import android.view.TouchDelegate;
 import android.view.View;
-import android.view.ViewTreeObserver;
 import android.view.WindowManager.LayoutParams;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
@@ -67,7 +64,6 @@ public class MainActivity5 extends Activity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main5);
-
 
         button6 = findViewById(R.id.button6);
         button = findViewById(R.id.button);
@@ -163,7 +159,6 @@ public class MainActivity5 extends Activity {
             }
         }
     }
-
 
     private Set<String> loadInputHistory() {
         return getSharedPreferences("InputHistory", MODE_PRIVATE)
@@ -268,7 +263,6 @@ public class MainActivity5 extends Activity {
             enterButton.setVisibility(View.GONE);
 
             connectAndExecuteCommand();
-
         }
     }
 
@@ -449,7 +443,6 @@ public class MainActivity5 extends Activity {
                     button6.setVisibility(View.VISIBLE);
                     button.setVisibility(View.VISIBLE);
                     textView2.setVisibility(View.VISIBLE);
-
 
                     button6.setOnClickListener(view -> {
                         final Animation myAnim = AnimationUtils.loadAnimation(MainActivity5.this, R.anim.bounce);
