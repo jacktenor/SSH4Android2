@@ -113,7 +113,7 @@
     <string name="run_command_ndownload_file">Run Command\nDownload File</string>
     <string name="read_me">Read Me</string>
     <string name="main_menu">Main Menu</string>
-    <string name="ssh4android_can_run_commands_as_well_as_file_transfers_on_an_ssh_server_n_if_you_run_the_commands_quot_ls_quot_or_quot_dir_quot_you_receive_an_interactive_list_of_files_and_directories_you_can_download_or_traverse_n_the_second_activity_uses_quot_file_picker_quot_to_select_files_to_upload_to_the_remote_ssh_server">"SSH4Android can run commands on a remote SSH server with limited feedback. It also provides a graphical user interface for uploading and downloading files and directories. Longpressing a directory will give you download options. Currently there is a significant delay before the progress bar is displayed on large uploads. "</string>
+    <string name="ssh4android_can_run_commands_as_well_as_file_transfers_on_an_ssh_server_n_if_you_run_the_commands_quot_ls_quot_or_quot_dir_quot_you_receive_an_interactive_list_of_files_and_directories_you_can_download_or_traverse_n_the_second_activity_uses_quot_file_picker_quot_to_select_files_to_upload_to_the_remote_ssh_server">SSH Android can run commands on a remote SSH server with limited feedback. It also provides a graphical user interface for uploading and downloading files and directories. Long Pressing a directory will give you download options. Currently there is a significant delay before the progress bar is displayed on large uploads. SSH Android creates a public and private key on first run as well as placing a key in the ~/.ssh/authorized_keys file after a successful login for use in subsequent authorizations .</string>
     <string name="upload_file">Upload File</string>
     <string name="read_me3">Read Me</string>
     <string name="clear_history">CLEAR HISTORY</string>
@@ -159,4 +159,7 @@
     <string name="copy7">Copy</string>
     <string name="press_to_copy_text">Press to copy text</string>
     <string name="save_npassword22">Save\nPassword?</string>
+    <string name="testing">TESTING</string>
+    <string name="hidden_files">Hidden files?</string>
+    <string name="hidden_nfiles">Hidden\nfiles?</string>
 </resources>

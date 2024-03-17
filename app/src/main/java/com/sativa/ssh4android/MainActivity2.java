@@ -1,6 +1,7 @@
 package com.sativa.ssh4android;
 
 import static android.view.View.VISIBLE;
+
 import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -10,6 +11,7 @@ import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.os.Environment;
 import android.text.InputType;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.WindowManager;
@@ -22,9 +24,11 @@ import android.widget.CheckBox;
 import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.jcraft.jsch.ChannelExec;
@@ -32,12 +36,18 @@ import com.jcraft.jsch.ChannelSftp;
 import com.jcraft.jsch.ChannelSftp.LsEntry;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
+import com.jcraft.jsch.KeyPair;
 import com.jcraft.jsch.Session;
 import com.jcraft.jsch.SftpATTRS;
 import com.jcraft.jsch.SftpException;
+
 import org.apache.commons.compress.archivers.tar.TarArchiveEntry;
 import org.apache.commons.compress.archivers.tar.TarArchiveOutputStream;
+
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -45,13 +55,16 @@ import java.lang.ref.WeakReference;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Vector;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -84,7 +97,12 @@ public class MainActivity2 extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main2);
 
+        Executor executor = Executors.newSingleThreadExecutor();
+        CompletableFuture.runAsync(this::performSSHOperations, executor);
+
         getWindow().setBackgroundDrawableResource(R.drawable.panther);
+
+        checkAndRequestPermission();
 
         button = findViewById(R.id.button);
         inputAutoComplete = findViewById(R.id.inputAutoComplete);
@@ -92,6 +110,7 @@ public class MainActivity2 extends Activity {
         fileListView = findViewById(R.id.fileListView);
         progressBar = findViewById(R.id.progressBar);
         savePasswordCheckbox = findViewById(R.id.savePasswordCheckbox);
+        CheckBox showHiddenFilesCheckbox = findViewById(R.id.showHiddenFilesCheckbox);
 
         inputAutoComplete.setInputType(InputType.TYPE_CLASS_TEXT);
 
@@ -110,8 +129,19 @@ public class MainActivity2 extends Activity {
             return false;
         });
 
+        showHiddenFilesCheckbox.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            // Call connectAndListDirectory based on checkbox state
+            connectAndListDirectory(isChecked);
+        });
+
         inputAutoComplete.requestFocus();
         getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE);
+
+        showHiddenFilesCheckbox.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            // Call connectAndListDirectory based on checkbox state
+            connectAndListDirectory(isChecked);
+        });
+
 
         SharedPreferences sharedPreferences = getSharedPreferences("InputHistory", MODE_PRIVATE);
         inputHistory = new HashSet<>(sharedPreferences.getStringSet(INPUT_HISTORY_KEY, new HashSet<>()));
@@ -158,11 +188,41 @@ public class MainActivity2 extends Activity {
                 // Selected item is a directory, show a dialog to confirm directory download
                 showChooseDialog(fullFilePath);
             }
-
             // Return true to consume the long click event
             return true;
         });
     }
+
+    private void checkAndRequestPermission() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                != PackageManager.PERMISSION_GRANTED) {
+            // Permission is not granted, request it
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                    REQUEST_WRITE_EXTERNAL_STORAGE);
+        } else {
+            // Permission is already granted, proceed with file operation
+            // For example, call connectAndListDirectory();
+            loadInputHistory();
+        }
+    }
+
+    // Override onRequestPermissionsResult to handle the result of the permission request
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQUEST_WRITE_EXTERNAL_STORAGE) {
+            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                // Permission was granted, proceed with file operation
+                // For example, call connectAndListDirectory();
+                loadInputHistory();
+            } else {
+                // Permission denied, show a message or take appropriate action
+                loadInputHistory(); //TODO
+            }
+        }
+    }
+
     // Define showChooseDialog() outside of any other methods
     private void showChooseDialog(String fullFilePath) {
         // Inflate the custom dialog layout
@@ -212,9 +272,6 @@ public class MainActivity2 extends Activity {
         builder.setView(dialogView);
         alertDialog = builder.create();
         alertDialog.show();
-
-        // Check and request permission before initiating any file operations
-        checkAndRequestPermission();
     }
 
     private String getLocalDownloadPath(String remoteDirectory) {
@@ -222,36 +279,6 @@ public class MainActivity2 extends Activity {
         // For example, you might want to use the remote directory name as the local folder name
         String remoteDirectoryName = remoteDirectory.substring(remoteDirectory.lastIndexOf("/") + 1);
         return Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS) + "/" + remoteDirectoryName;
-    }
-
-    private void checkAndRequestPermission() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                != PackageManager.PERMISSION_GRANTED) {
-            // Permission is not granted, request it
-            ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
-                    REQUEST_WRITE_EXTERNAL_STORAGE);
-        } else {
-            // Permission is already granted, proceed with file operation
-            // For example, call connectAndListDirectory();
-            loadInputHistory();
-        }
-    }
-
-    // Override onRequestPermissionsResult to handle the result of the permission request
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == REQUEST_WRITE_EXTERNAL_STORAGE) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                // Permission was granted, proceed with file operation
-                // For example, call connectAndListDirectory();
-                loadInputHistory();
-            } else {
-                // Permission denied, show a message or take appropriate action
-                loadInputHistory(); //TODO
-            }
-        }
     }
 
     private Set<String> loadInputHistory() {
@@ -335,6 +362,7 @@ public class MainActivity2 extends Activity {
                 }
                 inputAutoComplete.setText("");
                 savePasswordCheckbox.setVisibility(View.GONE);
+
                 inputAutoComplete.setInputType(InputType.TYPE_CLASS_TEXT);
                 break;
         }
@@ -389,18 +417,24 @@ public class MainActivity2 extends Activity {
         return passwordsMap.get(serverAddress + "_" + username);
     }
 
+
     private void connectAndExecuteCommand() {
         Executor executor = Executors.newSingleThreadExecutor();
 
         executor.execute(() -> {
+
+            String keysDirectory = getApplicationContext().getFilesDir().getPath();
+            String privateKeyPathAndroid = keysDirectory + "/ssh4android";
+
             Session session = null;
             String hostKey = null;
 
             try {
                 JSch jsch = new JSch();
                 session = jsch.getSession(username, serverAddress, 22);
-                session.setConfig("StrictHostKeyChecking", "ask");
-                session.setConfig("PreferredAuthentications", "password");
+                session.setConfig("StrictHostKeyChecking", "yes");
+                session.setConfig("PreferredAuthentications", "publickey,password");
+                jsch.addIdentity(privateKeyPathAndroid);
                 session.setPassword(password);
                 session.connect();
             } catch (JSchException ex) {
@@ -445,7 +479,7 @@ public class MainActivity2 extends Activity {
             // Handle host key acceptance
             // You can continue with the remote file transfer here
             alertDialog.dismiss(); // Dismiss the dialog
-            connectAndExecuteCommand2();
+            performSSHOperations();
         });
 
         denyButton.setOnClickListener(view -> {
@@ -464,11 +498,134 @@ public class MainActivity2 extends Activity {
         alertDialog.show();
     }
 
+    private void performSSHOperations() {
+        Executor executor = Executors.newSingleThreadExecutor();
+
+        executor.execute(() -> {
+            String keysDirectory = getApplicationContext().getFilesDir().getPath();
+            String privateKeyPathAndroid = keysDirectory + "/ssh4android";
+            String publicKeyPathAndroid = keysDirectory + "/ssh4android.pub";
+            String publicKeyPathServer = "/home/" + username + "/.ssh/authorized_keys";
+
+            try {
+                JSch jsch = new JSch();
+
+                if (!Files.exists(Paths.get(privateKeyPathAndroid))) {
+                    KeyPair keyPair = KeyPair.genKeyPair(jsch, KeyPair.RSA);
+                    keyPair.writePrivateKey(privateKeyPathAndroid);
+                    Log.d("SSH", "Generating private key... : " + privateKeyPathAndroid);
+                    Files.setPosixFilePermissions(Paths.get(privateKeyPathAndroid), PosixFilePermissions.fromString("rw-------"));
+
+                    byte[] publicKeyBytes = keyPair.getPublicKeyBlob();
+                    String publicKeyString = Base64.getEncoder().encodeToString(publicKeyBytes);
+
+                    try (FileWriter writer = new FileWriter(publicKeyPathAndroid)) {
+                        writer.write("ssh-rsa " + publicKeyString + " " + username);
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "IOException: " + e.getMessage()));
+                    }
+                }
+
+                Session session = jsch.getSession(username, serverAddress, 22);
+                session.setConfig("StrictHostKeyChecking", "no");
+                session.setConfig("PreferredAuthentications", "publickey,password");
+                jsch.addIdentity(privateKeyPathAndroid);
+                session.setPassword(password);
+                try {
+                    session.connect();
+                    Log.d("SSH", "Authentication successful");
+                    uploadPublicKey(session, publicKeyPathAndroid, publicKeyPathServer);
+                } catch (JSchException keyAuthException) {
+                    keyAuthException.printStackTrace();
+                    runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "JSchException: " + keyAuthException.getMessage()));
+                }
+                connectAndExecuteCommand2();
+
+                if (session.isConnected()) {
+                    session.disconnect();
+                }
+            } catch (JSchException | IOException e) {
+                e.printStackTrace();
+            }
+        });
+    }
+
+    private void uploadPublicKey(Session session, String publicKeyPathAndroid, String publicKeyPathServer)
+            throws JSchException, IOException {
+
+        ChannelSftp channelSftp = (ChannelSftp) session.openChannel("sftp");
+        channelSftp.connect();
+
+        try (InputStream publicKeyStream = Files.newInputStream(Paths.get(publicKeyPathAndroid))) {
+
+            Log.d("SSH", "publicKeyPathAndroid(upload): " + publicKeyPathAndroid);
+            Log.d("SSH", "publicKeyPathServer(upload): " + publicKeyPathServer);
+
+            // Read the existing authorized_keys content
+            String existingKeysContent = readExistingKeys(session, publicKeyPathServer);
+
+            // Check if the key already exists
+            if (!existingKeysContent.contains(new String(Files.readAllBytes(Paths.get(publicKeyPathAndroid))))) {
+                // Append the new key with a newline character at the beginning
+                String newKeyContent = "\n" + new String(Files.readAllBytes(Paths.get(publicKeyPathAndroid)));
+                String updatedKeysContent = existingKeysContent + newKeyContent;
+
+                // Write the updated content back to the authorized_keys file
+                try (InputStream updatedKeysStream = new ByteArrayInputStream(updatedKeysContent.getBytes())) {
+                    channelSftp.put(updatedKeysStream, publicKeyPathServer);
+                } catch (IOException | SftpException e) {
+                    e.printStackTrace();
+                    runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "IOException | SftpException: " + e.getMessage()));
+                }
+            } else {
+                Log.d("SSH", "Key already exists in authorized_keys file. Skipping upload.");
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+            runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "IOException: " + e.getMessage()));
+        } finally {
+            channelSftp.disconnect();
+        }
+    }
+
+    // Read existing keys from the authorized_keys file
+    private String readExistingKeys(Session session, String publicKeyPathServer) throws JSchException, IOException {
+        ChannelSftp channelSftp = (ChannelSftp) session.openChannel("sftp");
+        channelSftp.connect();
+
+        try (InputStream existingKeysStream = channelSftp.get(publicKeyPathServer)) {
+            return new String(readAllBytes(existingKeysStream));
+        } catch (SftpException e) {
+            // Handle the case where the authorized_keys file doesn't exist yet
+            return "";
+        } finally {
+            channelSftp.disconnect();
+        }
+    }
+
+    // Replace InputStream#readAllBytes with the alternative method
+    private byte[] readAllBytes(InputStream inputStream) throws IOException {
+        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+        int nRead;
+        byte[] data = new byte[16384];
+
+        while ((nRead = inputStream.read(data, 0, data.length)) != -1) {
+            buffer.write(data, 0, nRead);
+        }
+
+        buffer.flush();
+        return buffer.toByteArray();
+    }
+
     private void connectAndExecuteCommand2() {
         // Use the activityReference field
         Executor executor = Executors.newSingleThreadExecutor();
 
         executor.execute(() -> {
+            String keysDirectory = getApplicationContext().getFilesDir().getPath();
+            String privateKeyPathAndroid = keysDirectory + "/ssh4android";
+
             WeakReference<MainActivity2> activityReference = new WeakReference<>(MainActivity2.this);
             StringBuilder output = new StringBuilder();
             boolean success = false;
@@ -483,7 +640,9 @@ public class MainActivity2 extends Activity {
                 JSch jsch = new JSch();
                 Session session = jsch.getSession(activity.username, activity.serverAddress, 22);
                 session.setConfig("StrictHostKeyChecking", "no");
-                session.setPassword(activity.password);
+                session.setConfig("PreferredAuthentications", "publickey,password");
+                jsch.addIdentity(privateKeyPathAndroid);
+                session.setPassword(password);
                 session.connect();
 
 
@@ -529,12 +688,14 @@ public class MainActivity2 extends Activity {
             });
         });
 
-        runOnUiThread(() ->  inputAutoComplete.setText(""));
-        runOnUiThread(() ->  inputAutoComplete.setVisibility(View.GONE));
-        runOnUiThread(() ->  inputAutoComplete.setEnabled(false));
-        runOnUiThread(() ->  enterButton.setEnabled(false));
-        runOnUiThread(() ->  enterButton.setVisibility(View.GONE));
-        runOnUiThread(() ->  fileListView.setVisibility(VISIBLE));
+        CheckBox showHiddenFilesCheckbox = findViewById(R.id.showHiddenFilesCheckbox); // Initialize the checkbox
+        runOnUiThread(() -> showHiddenFilesCheckbox.setVisibility(View.VISIBLE));
+        runOnUiThread(() -> inputAutoComplete.setText(""));
+        runOnUiThread(() -> inputAutoComplete.setVisibility(View.GONE));
+        runOnUiThread(() -> inputAutoComplete.setEnabled(false));
+        runOnUiThread(() -> enterButton.setEnabled(false));
+        runOnUiThread(() -> enterButton.setVisibility(View.GONE));
+        runOnUiThread(() -> fileListView.setVisibility(VISIBLE));
     }
 
     private void displayOutput(String output) {
@@ -547,10 +708,13 @@ public class MainActivity2 extends Activity {
         fileListView.setAdapter(adapter);
     }
 
-    private void downloadFile(final String filePath) {
+    private void downloadFile(final String filepath) {
         Executor executor = Executors.newSingleThreadExecutor();
 
         executor.execute(() -> {
+            String keysDirectory = getApplicationContext().getFilesDir().getPath();
+            String privateKeyPathAndroid = keysDirectory + "/ssh4android";
+
             WeakReference<MainActivity2> activityReference = new WeakReference<>(MainActivity2.this);
             List<String> directoryContents = null;
             boolean success = false;
@@ -559,18 +723,20 @@ public class MainActivity2 extends Activity {
                 JSch jsch = new JSch();
                 Session session = jsch.getSession(username, serverAddress, 22);
                 session.setConfig("StrictHostKeyChecking", "no");
+                session.setConfig("PreferredAuthentications", "publickey,password");
+                jsch.addIdentity(privateKeyPathAndroid);
                 session.setPassword(password);
                 session.connect();
 
                 ChannelSftp channelSftp = (ChannelSftp) session.openChannel("sftp");
                 channelSftp.connect();
 
-                SftpATTRS attrs = channelSftp.lstat(filePath);
+                SftpATTRS attrs = channelSftp.lstat(filepath);
 
                 // Check if the clicked item is a directory
                 if (attrs.isDir()) {
                     // Update the fileListView with the contents of the clicked directory
-                    channelSftp.cd(filePath);
+                    channelSftp.cd(filepath);
                     currentRemoteDirectory = channelSftp.pwd();
                     Vector<LsEntry> rawList = channelSftp.ls("*");
 
@@ -595,13 +761,13 @@ public class MainActivity2 extends Activity {
                     long downloadedSize = 0;
 
                     // Set the local download path based on the file name
-                    String fileName = filePath.substring(filePath.lastIndexOf("/") + 1);
+                    String fileName = filepath.substring(filepath.lastIndexOf("/") + 1);
                     String localDownloadPath = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS) + "/" + fileName;
 
                     // Open an OutputStream to write the file locally
                     try (OutputStream outputStream = Files.newOutputStream(Paths.get(localDownloadPath))) {
                         // Open an InputStream to read the file remotely
-                        InputStream inputStream = channelSftp.get(filePath);
+                        InputStream inputStream = channelSftp.get(filepath);
 
                         while ((bytesRead = inputStream.read(buffer)) > 0) {
                             outputStream.write(buffer, 0, bytesRead);
@@ -628,7 +794,7 @@ public class MainActivity2 extends Activity {
 
                 boolean finalSuccess = success;
                 List<String> finalDirectoryContents = directoryContents;
-                String fileName = filePath.substring(filePath.lastIndexOf("/") + 1);
+                String fileName = filepath.substring(filepath.lastIndexOf("/") + 1);
 
                 runOnUiThread(() -> {
                     MainActivity2 activity = activityReference.get();
@@ -652,10 +818,14 @@ public class MainActivity2 extends Activity {
             }
         });
     }
+
     private void downloadDirectory(final String remotePath, final String localParentPath) {
         Executor executor = Executors.newSingleThreadExecutor();
 
         executor.execute(() -> {
+            String keysDirectory = getApplicationContext().getFilesDir().getPath();
+            String privateKeyPathAndroid = keysDirectory + "/ssh4android";
+
             WeakReference<MainActivity2> activityReference = new WeakReference<>(MainActivity2.this);
             boolean success = false;
 
@@ -663,6 +833,8 @@ public class MainActivity2 extends Activity {
                 JSch jsch = new JSch();
                 Session session = jsch.getSession(username, serverAddress, 22);
                 session.setConfig("StrictHostKeyChecking", "no");
+                session.setConfig("PreferredAuthentications", "publickey,password");
+                jsch.addIdentity(privateKeyPathAndroid);
                 session.setPassword(password);
                 session.connect();
 
@@ -803,12 +975,18 @@ public class MainActivity2 extends Activity {
 
         // Update the current directory and initiate listing
         currentRemoteDirectory = newPath.toString();
-        connectAndListDirectory();
-    }
+
+            // Call connectAndListDirectory based on checkbox state
+            connectAndListDirectory(true);
+        }
+
     private void downloadCompressedDirectory(final String remotePath, final String localParentPath) {
         Executor executor = Executors.newSingleThreadExecutor();
 
         executor.execute(() -> {
+            String keysDirectory = getApplicationContext().getFilesDir().getPath();
+            String privateKeyPathAndroid = keysDirectory + "/ssh4android";
+
             WeakReference<MainActivity2> activityReference = new WeakReference<>(MainActivity2.this);
             boolean success = false;
 
@@ -816,6 +994,8 @@ public class MainActivity2 extends Activity {
                 JSch jsch = new JSch();
                 Session session = jsch.getSession(username, serverAddress, 22);
                 session.setConfig("StrictHostKeyChecking", "no");
+                session.setConfig("PreferredAuthentications", "publickey,password");
+                jsch.addIdentity(privateKeyPathAndroid);
                 session.setPassword(password);
                 session.connect();
 
@@ -934,20 +1114,25 @@ public class MainActivity2 extends Activity {
             cumulativeProgress = currentProgress * 100 / fileList.size();
             int finalCumulativeProgress = cumulativeProgress;
             runOnUiThread(() -> progressBar.setProgress(Math.min(finalCumulativeProgress, maxProgress)));
-
         }
     }
 
-    private void connectAndListDirectory() {
+        private void connectAndListDirectory(boolean showHiddenFiles) {
         Executor executor = Executors.newSingleThreadExecutor();
 
         executor.execute(() -> {
+
+            String keysDirectory = getApplicationContext().getFilesDir().getPath();
+            String privateKeyPathAndroid = keysDirectory + "/ssh4android";
+
             List<String> newDirectoryContents = new ArrayList<>();
 
             try {
                 JSch jsch = new JSch();
                 Session session = jsch.getSession(username, serverAddress, 22);
                 session.setConfig("StrictHostKeyChecking", "no");
+                session.setConfig("PreferredAuthentications", "publickey,password");
+                jsch.addIdentity(privateKeyPathAndroid);
                 session.setPassword(password);
                 session.connect();
 
@@ -957,8 +1142,8 @@ public class MainActivity2 extends Activity {
                 // Change the current directory on the remote server
                 channelSftp.cd(currentRemoteDirectory);
 
-                // List the contents of the current directory
-                Vector<LsEntry> list = channelSftp.ls("*");
+                // List the contents of the current directory, including hidden files if showHiddenFiles is true
+                Vector<LsEntry> list = channelSftp.ls(showHiddenFiles ? ".*" : "*");
 
                 for (LsEntry entry : list) {
                     String entryName = entry.getFilename();

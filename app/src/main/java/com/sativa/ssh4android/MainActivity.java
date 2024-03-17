@@ -44,13 +44,6 @@ public class MainActivity extends Activity {
             startActivity(i);
         });
 
-        button3.setOnClickListener(view -> {
-            Intent i = new Intent(MainActivity.this, MainActivity5.class);
-            final Animation myAnim = AnimationUtils.loadAnimation(this, R.anim.bounce);
-            button3.startAnimation(myAnim);
-            startActivity(i);
-        });
-
         button4.setOnClickListener(view -> {
             Intent i = new Intent(MainActivity.this, MainActivity4.class);
             final Animation myAnim = AnimationUtils.loadAnimation(this, R.anim.bounce);
@@ -58,10 +51,16 @@ public class MainActivity extends Activity {
             startActivity(i);
         });
 
+        button3.setOnClickListener(view -> {
+            Intent i = new Intent(MainActivity.this, MainActivity5.class);
+            final Animation myAnim = AnimationUtils.loadAnimation(this, R.anim.bounce);
+            button3.startAnimation(myAnim);
+            startActivity(i);
+        });
+
         button5.setOnClickListener(view -> {
             if (!isSureButtonClicked) {
                 // First click, change the label to "ARE YOU SURE?"
-
                 button5.setTextColor( Color.RED );
                 button5.setText("ARE YOU\n SURE?");
                 isSureButtonClicked = true;

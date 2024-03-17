@@ -17,7 +17,7 @@
         android:minHeight="50dp"
         android:text="@string/connect_to_an_ssh_server"
         android:textAlignment="center"
-        android:textColor="#FFFFFF"
+        android:textColor="#757575"
         android:textSize="24sp"
         android:textStyle="bold|italic"
         app:layout_constraintEnd_toEndOf="parent"
@@ -106,6 +106,5 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintStart_toStartOf="parent" />
-
 
 </androidx.constraintlayout.widget.ConstraintLayout>
