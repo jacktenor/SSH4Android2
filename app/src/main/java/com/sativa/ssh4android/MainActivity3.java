@@ -1,7 +1,6 @@
 package com.sativa.ssh4android;
 
 import static com.sativa.ssh4android.MainActivity5.REQUEST_WRITE_EXTERNAL_STORAGE;
-
 import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -26,11 +25,9 @@ import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.ProgressBar;
 import android.widget.TextView;
-
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.jcraft.jsch.Channel;
@@ -39,9 +36,9 @@ import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.KeyPair;
 import com.jcraft.jsch.Session;
+import com.jcraft.jsch.SftpATTRS;
 import com.jcraft.jsch.SftpException;
 import com.jcraft.jsch.SftpProgressMonitor;
-
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -58,8 +55,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -80,16 +77,12 @@ public class MainActivity3 extends Activity {
     protected String remoteFileDestination;
     private CheckBox savePasswordCheckbox;
     private Button button;
-
     private final AtomicInteger lastProgress = new AtomicInteger(-1);
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main3);
-
-        Executor executor = Executors.newSingleThreadExecutor();
-        CompletableFuture.runAsync(this::performSSHOperations, executor);
 
         getWindow().setBackgroundDrawableResource(R.drawable.panther);
 
@@ -309,8 +302,6 @@ public class MainActivity3 extends Activity {
 
 
     private void connectAndExecuteCommand() {
-        String keysDirectory = getApplicationContext().getFilesDir().getPath();
-        String privateKeyPathAndroid = keysDirectory + "/ssh4android";
 
         Executor executor = Executors.newSingleThreadExecutor();
 
@@ -323,7 +314,6 @@ public class MainActivity3 extends Activity {
                 session = jsch.getSession(username, serverAddress, 22);
                 session.setConfig("StrictHostKeyChecking", "yes");
                 session.setConfig("PreferredAuthentications", "publickey,password");
-                jsch.addIdentity(privateKeyPathAndroid);
                 session.setPassword(password);
                 session.connect();
             } catch (JSchException ex) {
@@ -407,128 +397,38 @@ public class MainActivity3 extends Activity {
         Executor executor = Executors.newSingleThreadExecutor();
 
         executor.execute(() -> {
-
             try {
                 JSch jsch = new JSch();
+                Session session = jsch.getSession(username, serverAddress, 22);
+                session.setConfig("StrictHostKeyChecking", "no");
+                session.setConfig("PreferredAuthentications", "publickey,password");
 
                 if (!Files.exists(Paths.get(privateKeyPathAndroid))) {
-                    KeyPair keyPair = null;
-                    try {
-                        keyPair = KeyPair.genKeyPair(jsch, KeyPair.RSA);
-                    } catch (JSchException e) {
-                        e.printStackTrace();
-                        runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "JSchException: " + e.getMessage()));
-                    }
-                    try {
-                        assert keyPair != null;
-                        keyPair.writePrivateKey(privateKeyPathAndroid);
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                        runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "IOException: " + e.getMessage()));
-                    }
-                    Log.d("SSH", "Generating private key... : " + privateKeyPathAndroid);
-                    try {
-                        Files.setPosixFilePermissions(Paths.get(privateKeyPathAndroid), PosixFilePermissions.fromString("rw-------"));
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                        runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "IOException: " + e.getMessage()));
-                    }
+                    KeyPair keyPair = KeyPair.genKeyPair(jsch, KeyPair.RSA);
+                    keyPair.writePrivateKey(privateKeyPathAndroid);
+                    Files.setPosixFilePermissions(Paths.get(privateKeyPathAndroid), PosixFilePermissions.fromString("rw-------"));
 
                     byte[] publicKeyBytes = keyPair.getPublicKeyBlob();
                     String publicKeyString = Base64.getEncoder().encodeToString(publicKeyBytes);
 
                     try (FileWriter writer = new FileWriter(publicKeyPathAndroid)) {
                         writer.write("ssh-rsa " + publicKeyString + " " + username);
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                        runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "IOException: " + e.getMessage()));
                     }
                 }
-            } catch (RuntimeException ex) {
-                ex.printStackTrace();
-                runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "RuntimeException: " + ex.getMessage()));
-            }
-        });
 
-        executor.execute(() -> {
-            JSch jsch = new JSch();
-            Session session = null;
-            try {
-                session = jsch.getSession(username, serverAddress, 22);
-            } catch (JSchException e) {
-                e.printStackTrace();
-                runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), " "));
-            }
-            if (session != null) {
-                session.setConfig("StrictHostKeyChecking", "no");
-            }
-            if (session != null) {
-                session.setConfig("PreferredAuthentications", "publickey,password");
-            }
-            try {
                 jsch.addIdentity(privateKeyPathAndroid);
-            } catch (JSchException e) {
-                e.printStackTrace();
-                runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "JSchException: " + e.getMessage()));            }
-            if (session != null) {
                 session.setPassword(password);
-            }
+                session.connect();
 
-            try {
-                if (session != null) {
-                    session.connect();
-                }
-            } catch (JSchException ex) {
-                ex.printStackTrace();
-                runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "JSchException | IOException: " + ex.getMessage()));
-            }
-            Log.d("SSH", "Key-based authentication successful");
-            try {
-                if (session != null) {
-                    uploadPublicKey(session, publicKeyPathAndroid, publicKeyPathServer);
+                Log.d("SSH", "Key-based authentication successful");
+                uploadPublicKey(session, publicKeyPathAndroid, publicKeyPathServer);
+
+                if (session.isConnected()) {
+                    session.disconnect();
                 }
             } catch (JSchException | IOException ex) {
-                ex.printStackTrace();
-                runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "JSchException | IOException: " + ex.getMessage()));
-            }
-        });
-
-        Log.d("SSH", "Key-based authentication failed. Trying password-based authentication.");
-        executor.execute(() -> {
-            Session session = null;
-            JSch jsch = new JSch();
-
-            try {
-                session = jsch.getSession(username, serverAddress, 22);
-            } catch (JSchException e) {
-                e.printStackTrace();
-                runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), " "));
-
-            }
-            if (session != null) {
-                session.setConfig("StrictHostKeyChecking", "no");
-            }
-            try {
-                jsch.addIdentity(privateKeyPathAndroid);
-            } catch (JSchException e) {
-                e.printStackTrace();
-                runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "JSchException: " + e.getMessage()));
-            }
-            if (session != null) {
-                session.setPassword(password);
-            }
-            try {
-                if (session != null) {
-                    session.connect();
-                }
-            } catch (JSchException e) {
-                e.printStackTrace();
-                runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "JSchException: " + e.getMessage()));
-            }
-            Log.d("SSH", "Password-based authentication successful");
-
-            if (session != null && session.isConnected()) {
-                session.disconnect();
+                Log.w("SSH4Android", ex.getMessage(), ex);
+                runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), ex.getClass().getSimpleName() + ": " + ex.getMessage()));
             }
         });
     }
@@ -556,15 +456,16 @@ public class MainActivity3 extends Activity {
                 // Write the updated content back to the authorized_keys file
                 try (InputStream updatedKeysStream = new ByteArrayInputStream(updatedKeysContent.getBytes())) {
                     channelSftp.put(updatedKeysStream, publicKeyPathServer);
+                    runOnUiThread(() -> GreenCustomToast.showCustomToast(getApplicationContext(), "Key added to accepted_keys"));
                 } catch (IOException | SftpException e) {
-                    e.printStackTrace();
+                    Log.w("SSH4Android", e.getMessage(), e);
                     runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "IOException | SftpException: " + e.getMessage()));
                 }
             } else {
                 Log.d("SSH", "Key already exists in authorized_keys file. Skipping upload.");
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            Log.w("SSH4Android", e.getMessage(), e);
             runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "IOException: " + e.getMessage()));
         } finally {
             channelSftp.disconnect();
@@ -641,7 +542,7 @@ public class MainActivity3 extends Activity {
                 return tempFile.getAbsolutePath();
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            Log.w("SSH4Android", e.getMessage(), e);
             runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "IOException: " + e.getMessage()));
         }
         return null;
@@ -656,129 +557,151 @@ public class MainActivity3 extends Activity {
         }
     }
 
-    private void executeFileUpload (Uri selectedFileUri){
+    private void executeFileUpload(Uri selectedFileUri) {
         Executor executor = Executors.newSingleThreadExecutor();
-        runOnUiThread(() -> progressBar.setIndeterminate(true));
-        runOnUiThread(() -> progressBar.setVisibility(View.VISIBLE));
+        runOnUiThread(() -> {
+            progressBar.setIndeterminate(true);
+            progressBar.setVisibility(View.VISIBLE);
+        });
 
         executor.execute(() -> {
-            String keysDirectory = getApplicationContext().getFilesDir().getPath();
-            String privateKeyPathAndroid = keysDirectory + "/ssh4android";
+            try {
+                String keysDirectory = getApplicationContext().getFilesDir().getPath();
+                String privateKeyPathAndroid = keysDirectory + "/ssh4android";
+                String localFileLocation = getFilePathFromUri(selectedFileUri);
 
-            // Set the local file location from the selected file URI
-            String localFileLocation = getFilePathFromUri(selectedFileUri);
-            // Check if localFileLocation is not null before using it
-            if (localFileLocation != null) {
-
-                // Set the remote file destination with the correct name
-                String remoteFileName = new File(localFileLocation).getName();
-                remoteFileDestination = "/home/" + username + "/Downloads/" + remoteFileName; // Use correct name
-
-                // Create a new session for file transfer
-                JSch jsch = new JSch();
-                Session transferSession = null;
-                try {
-                    transferSession = jsch.getSession(username, serverAddress, 22);
-                } catch (JSchException e) {
-                    e.printStackTrace();
-                    runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "JSchException: " + e.getMessage()));
+                if (localFileLocation == null) {
+                    return;
                 }
-                assert transferSession != null;
+
+                String remoteFileName = new File(localFileLocation).getName();
+                remoteFileDestination = "/home/" + username + "/Downloads/" + remoteFileName;
+
+                JSch jsch = new JSch();
+                Session transferSession = jsch.getSession(username, serverAddress, 22);
                 transferSession.setConfig("StrictHostKeyChecking", "no");
                 transferSession.setConfig("PreferredAuthentications", "publickey,password");
-                try {
-                    jsch.addIdentity(privateKeyPathAndroid);
-                } catch (JSchException ex) {
-                    throw new RuntimeException(ex);
-                }
+                jsch.addIdentity(privateKeyPathAndroid);
                 transferSession.setPassword(password);
-                try {
-                    transferSession.connect();
-                } catch (JSchException e) {
-                    e.printStackTrace();
-                    runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "JSchException: " + e.getMessage()));
-                }
+                transferSession.connect();
 
-                Channel channel = null;
-                try {
-                    channel = transferSession.openChannel("sftp");
-                } catch (JSchException e) {
-                    e.printStackTrace();
-                    runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "JSchException: " + e.getMessage()));
-                }
+                Channel channel = transferSession.openChannel("sftp");
+                if (channel != null) {
+                    channel.connect();
+                    ChannelSftp sftpChannel = (ChannelSftp) channel;
 
-                try {
-                    if (channel != null) {
-                        channel.connect();
-                    } else {
-                        runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "Null."));
-                    }
-                } catch (JSchException e) {
-                    e.printStackTrace();
-                    runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "JSchException: " + e.getMessage()));
-                }
+                    SftpProgressMonitor progressMonitor = new SftpProgressMonitor() {
+                        private long max;
+                        private long transferred;
 
-                ChannelSftp sftpChannel = (ChannelSftp) channel;
-
-                // Set up the progress monitor
-                SftpProgressMonitor progressMonitor = new SftpProgressMonitor() {
-                    private long max;
-                    private long transferred;
-
-                    @Override
-                    public void init(int op, String src, String dest, long max) {
-                        // Initialization, if needed
-                        transferred = 0;
-                        this.max = max; // Set the max value
-                        runOnUiThread(() -> progressBar.setIndeterminate(false));
-                    }
-
-                    @Override
-                    public boolean count(long count) {
-                        try {
-                            transferred += count;
-
-                            if (max > 0) {
-                                int progress = (int) ((transferred * 100) / max);
-                                int finalProgress = Math.min(progress, 100);
-
-                                // Only update the progress if it has changed
-                                if (finalProgress != lastProgress.get()) {
-                                    lastProgress.set(finalProgress);
-                                    runOnUiThread(() -> progressBar.setProgress(finalProgress));
-                                }
-                            }
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                            return false;
+                        @Override
+                        public void init(int op, String src, String dest, long max) {
+                            // Initialization logic here
+                            transferred = 0;
+                            this.max = max;
+                            runOnUiThread(() -> progressBar.setIndeterminate(false));
                         }
-                        return true;
+
+                        @Override
+                        public boolean count(long count) {
+                            try {
+                                transferred += count;
+
+                                if (max > 0) {
+                                    int progress = (int) ((transferred * 100) / max);
+                                    int finalProgress = Math.min(progress, 100);
+
+                                    if (finalProgress != lastProgress.get()) {
+                                        lastProgress.set(finalProgress);
+                                        runOnUiThread(() -> progressBar.setProgress(finalProgress));
+                                    }
+                                }
+                            } catch (Exception e) {
+                                Log.w("SSH4Android", e.getMessage(), e);
+                                return false;
+                            }
+                            return true;
+                        }
+
+                        @Override
+                        public void end() {
+                            // Cleanup logic here, if needed
+                        }
+                    };
+
+                        // Progress monitoring implementation
+                    try {
+                        SftpATTRS attrs = sftpChannel.stat(remoteFileDestination);
+                        if (attrs != null) {
+                            runOnUiThread(() -> showFileOverwriteConfirmationDialog(localFileLocation, sftpChannel, transferSession, progressMonitor));
+                            return;
+                        }
+                    } catch (SftpException ignored) {
+                        // File doesn't exist, proceed with upload
                     }
 
-                    @Override
-                    public void end() {
-                        // Cleanup, if needed
-                    }
-                };
-
-                try {
-                    if (sftpChannel != null) {
-                        sftpChannel.put(localFileLocation, remoteFileDestination, progressMonitor);
-                    }
-                } catch (SftpException e) {
-                    e.printStackTrace();
-                    runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "SftpException: " + e.getMessage()));
-                }
-
-                if (sftpChannel != null) {
+                    sftpChannel.put(localFileLocation, remoteFileDestination, progressMonitor);
                     sftpChannel.exit();
                     transferSession.disconnect();
+                    runOnUiThread(() -> progressBar.setVisibility(View.GONE));
+                    showChooseDialog();
                 }
-                runOnUiThread(() -> progressBar.setVisibility(View.GONE));
+            } catch (JSchException | SftpException e) {
+                Log.w("SSH4Android", e.getMessage(), e);
+                runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), e.getClass().getSimpleName() + ": " + e.getMessage()));
             }
-            showChooseDialog();
         });
     }
+
+    // Add this method to show the file overwrite confirmation dialog using the custom alert dialog design
+    private void showFileOverwriteConfirmationDialog(String localFilePath, ChannelSftp sftpChannel, Session transferSession, SftpProgressMonitor progressMonitor) {
+        // Inflate the custom dialog layout
+        View dialogView = getLayoutInflater().inflate(R.layout.dialog_host_key, null);
+
+        // Find UI elements in the inflated layout
+        TextView titleTextView = dialogView.findViewById(R.id.dialog_title);
+        TextView messageTextView = dialogView.findViewById(R.id.dialog_message);
+        Button acceptButton = dialogView.findViewById(R.id.button_accept);
+        Button denyButton = dialogView.findViewById(R.id.button_deny);
+
+        // Set content and behavior for the dialog elements
+        titleTextView.setText(R.string.file_exists);
+        messageTextView.setText(R.string.a_file_with_the_same_name_already_exists_do_you_want_to_overwrite_it);
+
+        acceptButton.setText(R.string.overwrite7);
+        acceptButton.setOnClickListener(view -> {
+            // User chose to overwrite, proceed with upload
+            alertDialog.dismiss(); // Dismiss the dialog
+            ExecutorService executorService = Executors.newSingleThreadExecutor();
+            executorService.submit(() -> {
+                try {
+                    sftpChannel.put(localFilePath, remoteFileDestination, progressMonitor);
+                } catch (SftpException e) {
+                    Log.w("SSH4Android", e.getMessage(), e);
+                    runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "SftpException: " + e.getMessage()));
+                }
+                sftpChannel.exit();
+                transferSession.disconnect();
+                runOnUiThread(() -> progressBar.setVisibility(View.GONE));
+                showChooseDialog();
+            });
+        });
+
+        denyButton.setText(R.string.cancel4);
+        denyButton.setOnClickListener(view -> {
+            // User chose to cancel, don't upload the file
+            alertDialog.dismiss(); // Dismiss the dialog
+            runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "File upload canceled."));
+            showChooseDialog(); // Show the choose dialog again
+        });
+
+        // Create and show the AlertDialog with the custom layout
+        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity3.this);
+        builder.setView(dialogView);
+        runOnUiThread(() -> alertDialog = builder.create());
+        runOnUiThread(() -> alertDialog.show());
+    }
+
     // Define showChooseDialog() outside of any other methods
     private void showChooseDialog() {
         // Inflate the custom dialog layout

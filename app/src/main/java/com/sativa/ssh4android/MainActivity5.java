@@ -358,8 +358,6 @@ public class MainActivity5 extends Activity {
         });
     }
 
-
-
     private void showHostKeyDialog(String hostKey) {
         // Inflate the custom dialog layout
         View dialogView = getLayoutInflater().inflate(R.layout.dialog_host_key, null);
@@ -424,7 +422,7 @@ public class MainActivity5 extends Activity {
                     try (FileWriter writer = new FileWriter(publicKeyPathAndroid)) {
                         writer.write("ssh-rsa " + publicKeyString + " " + username);
                     } catch (IOException e) {
-                        e.printStackTrace();
+                        Log.w("SSH4Android", e.getMessage(), e);
                         runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "IOException: " + e.getMessage()));
                     }
                 }
@@ -440,7 +438,7 @@ public class MainActivity5 extends Activity {
                     uploadPublicKey(session, publicKeyPathAndroid, publicKeyPathServer);
 
                 } catch (JSchException keyAuthException) {
-                    keyAuthException.printStackTrace();
+                    Log.w("SSH4Android", keyAuthException.getMessage(), keyAuthException);
                 }
 
                 if (session.isConnected()) {
@@ -448,7 +446,7 @@ public class MainActivity5 extends Activity {
                 }
 
             } catch (JSchException | IOException e) {
-                e.printStackTrace();
+                Log.w("SSH4Android", e.getMessage(), e);
             }
             connectAndExecuteCommand2();
         });
@@ -478,15 +476,17 @@ public class MainActivity5 extends Activity {
                 // Write the updated content back to the authorized_keys file
                 try (InputStream updatedKeysStream = new ByteArrayInputStream(updatedKeysContent.getBytes())) {
                     channelSftp.put(updatedKeysStream, publicKeyPathServer);
+                    runOnUiThread(() -> GreenCustomToast.showCustomToast(getApplicationContext(), "Key added to accepted_keys"));
+
                 } catch (IOException | SftpException e) {
-                    e.printStackTrace();
+                    Log.w("SSH4Android", e.getMessage(), e);
                     runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "IOException | SftpException: " + e.getMessage()));
                 }
             } else {
                 Log.d("SSH", "Key already exists in authorized_keys file. Skipping upload.");
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            Log.w("SSH4Android", e.getMessage(), e);
             runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "IOException: " + e.getMessage()));
         } finally {
             channelSftp.disconnect();
@@ -626,7 +626,7 @@ public class MainActivity5 extends Activity {
 
                 success = true;
             } catch (JSchException | IOException | InterruptedException e) {
-                e.printStackTrace();
+                Log.w("SSH4Android", e.getMessage(), e);
                 runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "Exception: " + e.getMessage()));
             }
 

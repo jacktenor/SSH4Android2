@@ -1,148 +1,30 @@
 <resources>
     <string name="app_name">SSH4Android</string>
-    <string name="button">Button</string>
-    <string name="address">Address:</string>
-    <string name="username">Username:</string>
-    <string name="connect">Connect</string>
-    <string name="password">Password:</string>
-    <string name="command">Command:</string>
-    <string name="location_of_file">Location of file:</string>
-    <string name="file_location">File location:</string>
-    <string name="run_command_on_remote_host_or_use_get_file_button_to_copy_remote_file">Run command on remote host or use Get filebutton to copy remote file.</string>
-    <string name="or_to_copy_remote_file">Or to copy remote file:</string>
-    <string name="get_file">Get file</string>
-    <string name="run_command_or_get_remote_file">Run command or get remote file.</string>
-    <string name="run_command">Run command</string>
-    <string name="run_command_or_get_push_file">Run command or get/push file.</string>
-    <string name="push_file">Push file.</string>
-    <string name="run_command_get_or_push_file">Run command, get or push file.</string>
-    <string name="destination">Destination:</string>
-    <string name="send_file">Send file</string>
-    <string name="run_command_get_file_or_send_file">Run command, get file, or send file.</string>
     <string name="connect_to_an_ssh_server">Connect to an SSH Server</string>
     <string name="submit">Submit</string>
-    <string name="submit2">Submit</string>
-    <string name="address2">Address</string>
-    <string name="username4">Username</string>
-    <string name="password4">Password</string>
-    <string name="file_location4">File Location</string>
-    <string name="file_destination">File Destination</string>
-    <string name="submit22">Submit</string>
-    <string name="hint_ssh_server_address">SSH Server Address</string>
-    <string name="hint_username">Username</string>
-    <string name="hint_password">Password</string>
-    <string name="hint_local_file_location">Local File Location</string>
-    <string name="hint_remote_file_destination">Remote File Destination</string>
-    <string name="ssh_server_address">SSH Server Address</string>
-    <string name="hint_remote_file_location">Remote File Location</string>
-    <string name="hint_command">Command</string>
-    <string name="toast">toast</string>
-    <string name="host_key_fingerprint">Host Key Fingerprint:</string>
-    <string name="_1234567890abcdef">1234567890ABCDEF</string>
-    <string name="accept">Accept</string>
-    <string name="deny">Deny</string>
-    <string name="host_key_verification">Host Key Verification</string>
-    <string name="host_key_fingerprint_n1234567890_ndo_you_want_to_accept_it">Host key fingerprint:\n1234567890\nDo you want to accept it?</string>
-    <string name="accept2">Accept</string>
-    <string name="deny2">Deny</string>
-    <string name="host_key_verification2">Host Key Verification</string>
-    <string name="host_key_fingerprint2">Host key fingerprint:\n</string>
     <string name="host_key_verification3">Host Key Verification</string>
-    <string name="host_key_fingerprint_n_hostkey_ndo_you_want_to_accept_this_host_key">\Host key fingerprint:\n\ + hostKey + \\nDo you want to accept this host key?\</string>
-    <string name="host_key_verification5">Host Key Verification</string>
-    <string name="host_key_fingerprint5">Host key fingerprint:\n</string>
     <string name="accept5">Accept</string>
     <string name="deny5">Deny</string>
     <string name="host_key_n_hostkey_ndo_you_wish_to_accept">Host key:\n + hostkey + \nDo you wish to accept?</string>
-    <string name="custom_toast_text">Custom Toast Text</string>
-    <string name="host_key_denied_connection_aborted">Host key denied. Connection aborted.</string>
-    <string name="host_key_denied_nconnection_aborted">Host key denied.\nConnection aborted.</string>
-    <string name="kitty">kitty</string>
-    <string name="image">image</string>
-    <string name="file_received_successfully">File received successfully.</string>
-    <string name="r_string_host_key_denied">R.string.Host key denied</string>
-    <string name="host_key_denied">Host key denied.</string>
-    <string name="file_sent_successfully">File sent successfully.</string>
-    <string name="file_transfer_failed">File transfer failed.</string>
-    <string name="JSchException">JSchException</string>
-    <string name="file_received_successfully2">File received successfully.</string>
-    <string name="file_sent_successfully3">File sent successfully.</string>
-    <string name="host_key_denied4">Host key denied.</string>
-    <string name="file_transfer_failed4">"File transfer failed: "</string>
-
-    <string-array name="questions">
-        <item>SSH Server Address</item>
-        <item>Username</item>
-        <item>Password</item>
-    </string-array>
-    <string-array name="questions4">
-        <item>SSH Server Address</item>
-        <item>Username</item>
-        <item>Password</item>
-        <item>Local File Location</item>
-        <item>Remote File Destination</item>
-    </string-array>
-    <string-array name="questions2">
-        <item>SSH Server Address</item>
-        <item>Username</item>
-        <item>Password</item>
-        <item>Remote File Location</item>
-    </string-array>
-    <string-array name="questions3">
-        <item>SSH Server Address</item>
-        <item>Username</item>
-        <item>Password</item>
-        <item>Command</item>
-    </string-array>
-    <string name="connected_successfully">Connected successfully.</string>
-    <string name="connection_failed">Connection failed.</string>
-    <string name="something_failed">"Something failed: "</string>
     <string name="ssh_server_address5">SSH Server Address</string>
-    <string name="connect2">Connect</string>
-    <string name="host_key_verification4">Host Key Verification</string>
-    <string name="host_key_fingerprint4">Host key fingerprint:\n</string>
-    <string name="do_you_want_to_accept_it4">\nDo you want to accept it?</string>
-    <string name="textview">TextView</string>
-    <string name="use_the_two_dots_n_to_go_up">Use the two dots: \'..\'\n       to go up</string>
     <string name="host_key_verification6">Host Key Verification</string>
     <string name="do_you_want_to_accept_it">\nDo you want to accept it?</string>
     <string name="host_key_fingerprint7">Host key fingerprint:\n</string>
-    <string name="host_key_verification9">Host Key Verification</string>
-    <string name="host_key_fingerprint9">Host key fingerprint:\n</string>
-    <string name="do_you_want_to_accept_it9">\nDo you want to accept it?</string>
-    <string name="run_command_ndownload_file">Run Command\nDownload File</string>
-    <string name="read_me">Read Me</string>
     <string name="main_menu">Main Menu</string>
     <string name="ssh4android_can_run_commands_as_well_as_file_transfers_on_an_ssh_server_n_if_you_run_the_commands_quot_ls_quot_or_quot_dir_quot_you_receive_an_interactive_list_of_files_and_directories_you_can_download_or_traverse_n_the_second_activity_uses_quot_file_picker_quot_to_select_files_to_upload_to_the_remote_ssh_server">SSH Android can run commands on a remote SSH server with limited feedback. It also provides a graphical user interface for uploading and downloading files and directories. Long Pressing a directory will give you download options. Currently there is a significant delay before the progress bar is displayed on large uploads. SSH Android creates a public and private key on first run as well as placing a key in the ~/.ssh/authorized_keys file after a successful login for use in subsequent authorizations .</string>
     <string name="upload_file">Upload File</string>
     <string name="read_me3">Read Me</string>
-    <string name="clear_history">CLEAR HISTORY</string>
-    <string name="password33">Password</string>
-    <string name="username33">Username</string>
-    <string name="choose_file">Choose File</string>
     <string name="choose_file1">Choose file</string>
     <string name="main_menu2">Main menu</string>
     <string name="pick_another_file_n_or_finish">Pick another file\n   or finish?</string>
-    <string name="continue2">Continue?</string>
     <string name="done">Done?</string>
-    <string name="Another2">Another upload?</string>
     <string name="another_upload">Another upload?</string>
-    <string name="continue_to_main_menu">Continue to main menu.</string>
-    <string name="or_continue_to_main_menu">Or continue to\n  Main menu?</string>
     <string name="https_beeralator_com">https://beeralator.com</string>
     <string name="or_continue_to_main_menu2">Or continue to\n  main menu?</string>
-    <string name="save_password">Save Password</string>
     <string name="clear_history_nand_passwords">Clear History\nAnd Passwords</string>
-    <string name="save_npassword">"  Save\nPassword?"</string>
-    <string name="save_npassword2">"  Save\nPassword?"</string>
     <string name="save_npassword3">Save\nPassword?</string>
     <string name="main_menu22">Main Menu</string>
-    <string name="download_entire_directory">Download entire directory?</string>
-    <string name="or_cancel">"Or cancel?"</string>
-    <string name="download_directory_or_return_to_list">Download directory or return to list?</string>
-    <string name="download_directory">Download Directory</string>
     <string name="cancel">Cancel</string>
-    <string name="download">Download</string>
     <string name="download_directory_or_cancel">Download Directory Or Cancel?</string>
     <string name="directory_download">Directory Download</string>
     <string name="or_cancel2">Or Cancel?</string>
@@ -154,12 +36,19 @@
     <string name="output">Output</string>
     <string name="again">Again?</string>
     <string name="copy">Copy</string>
-    <string name="copy3">Copy</string>
-    <string name="copy5">Copy?</string>
-    <string name="copy7">Copy</string>
-    <string name="press_to_copy_text">Press to copy text</string>
     <string name="save_npassword22">Save\nPassword?</string>
-    <string name="testing">TESTING</string>
-    <string name="hidden_files">Hidden files?</string>
     <string name="hidden_nfiles">Hidden\nfiles?</string>
+    <string name="overwrite_existing_file">Overwrite existing file?</string>
+    <string name="overwrite_or_cancel">Overwrite or cancel.</string>
+    <string name="overwrite">Overwrite</string>
+    <string name="overwrite2">Overwrite existing file?</string>
+    <string name="overwrite3">Overwrite\n</string>
+    <string name="overwrite4">\n?</string>
+    <string name="overwrite5">Overwrite all files in\n</string>
+    <string name="overwrite6">\n???</string>
+    <string name="file_exists">File Exists</string>
+    <string name="a_file_with_the_same_name_already_exists_do_you_want_to_overwrite_it">A file with the same name already exists. Do you want to overwrite it?</string>
+    <string name="overwrite7">Overwrite</string>
+    <string name="cancel4">Cancel</string>
+
 </resources>
