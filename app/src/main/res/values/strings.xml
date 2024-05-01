@@ -35,7 +35,7 @@
     <string name="download_file7">Download File</string>
     <string name="output">Output</string>
     <string name="again">Again?</string>
-    <string name="copy">Copy</string>
+    <string name="copy2">Copy</string>
     <string name="save_npassword22">Save\nPassword?</string>
     <string name="hidden_nfiles">Hidden\nfiles?</string>
     <string name="overwrite_existing_file">Overwrite existing file?</string>
@@ -47,8 +47,9 @@
     <string name="overwrite5">Overwrite all files in\n</string>
     <string name="overwrite6">\n???</string>
     <string name="file_exists">File Exists</string>
-    <string name="a_file_with_the_same_name_already_exists_do_you_want_to_overwrite_it">A file with the same name already exists. Do you want to overwrite it?</string>
     <string name="overwrite7">Overwrite</string>
     <string name="cancel4">Cancel</string>
+    <string name="the_file">The file\n</string>
+    <string name="exists_overwrite">\nalready exists.\nOverwrite?</string>
 
 </resources>

@@ -173,6 +173,7 @@ public class MainActivity2 extends Activity {
             String selectedFile = fileList.get(position);
             String fullFilePath = currentRemoteDirectory + "/" + selectedFile;
 
+
             // Check if the selected item is a directory
             if (directoryContents != null) {
                 // Selected item is a directory, show a dialog to confirm directory download
@@ -210,7 +211,7 @@ public class MainActivity2 extends Activity {
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == REQUEST_WRITE_EXTERNAL_STORAGE) {
+        if (requestCode == REQUEST_WRITE_EXTERNAL_STORAGE)
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 // Permission was granted, proceed with file operation
                 // For example, call connectAndListDirectory();
@@ -220,10 +221,10 @@ public class MainActivity2 extends Activity {
                 loadInputHistory(); //TODO
             }
         }
-    }
 
     // Define showChooseDialog() outside of any other methods
     private void showChooseDialog(String fullFilePath) {
+
         // Inflate the custom dialog layout
         View dialogView = getLayoutInflater().inflate(R.layout.choose2, null);
 
@@ -243,7 +244,7 @@ public class MainActivity2 extends Activity {
         compressedButton.setOnClickListener(view -> {
             final Animation myAnim = AnimationUtils.loadAnimation(MainActivity2.this, R.anim.bounce);
             compressedButton.startAnimation(myAnim);
-            // Handle file picker button click
+            // Handle compressed button click
             alertDialog.dismiss(); // Dismiss the dialog
             String remoteDirectory = "";
             downloadFile2(fullFilePath, getLocalDownloadPath(remoteDirectory));
@@ -252,14 +253,14 @@ public class MainActivity2 extends Activity {
         cancelButton3.setOnClickListener(view -> {
             final Animation myAnim = AnimationUtils.loadAnimation(MainActivity2.this, R.anim.bounce);
             cancelButton3.startAnimation(myAnim);
-            // Handle finish button click
+            // Handle cancel button click
             alertDialog.dismiss();
         });
 
         uncompressedButton.setOnClickListener(view -> {
             final Animation myAnim = AnimationUtils.loadAnimation(MainActivity2.this, R.anim.bounce);
             uncompressedButton.startAnimation(myAnim);
-            // Handle finish button click
+            // Handle uncompressed button click
             alertDialog.dismiss();
             String remoteDirectory = "";
             downloadFile3(fullFilePath, getLocalDownloadPath(remoteDirectory));
@@ -507,11 +508,12 @@ public class MainActivity2 extends Activity {
             try {
                 JSch jsch = new JSch();
 
-                if (!Files.exists(Paths.get(privateKeyPathAndroid))) {
+                final Path path = Paths.get(privateKeyPathAndroid);
+                if (!Files.exists(path)) {
                     KeyPair keyPair = KeyPair.genKeyPair(jsch, KeyPair.RSA);
                     keyPair.writePrivateKey(privateKeyPathAndroid);
                     Log.d("SSH", "Generating private key... : " + privateKeyPathAndroid);
-                    Files.setPosixFilePermissions(Paths.get(privateKeyPathAndroid), PosixFilePermissions.fromString("rw-------"));
+                    Files.setPosixFilePermissions(path, PosixFilePermissions.fromString("rw-------"));
 
                     byte[] publicKeyBytes = keyPair.getPublicKeyBlob();
                     String publicKeyString = Base64.getEncoder().encodeToString(publicKeyBytes);
@@ -554,17 +556,17 @@ public class MainActivity2 extends Activity {
         ChannelSftp channelSftp = (ChannelSftp) session.openChannel("sftp");
         channelSftp.connect();
 
-        try (InputStream publicKeyStream = Files.newInputStream(Paths.get(publicKeyPathAndroid))) {
+        final Path path = Paths.get(publicKeyPathAndroid);
+        try (InputStream publicKeyStream = Files.newInputStream(path)) {
             Log.d("SSH", "publicKeyPathAndroid(upload): " + publicKeyPathAndroid);
             Log.d("SSH", "publicKeyPathServer(upload): " + publicKeyPathServer);
-
             // Read the existing authorized_keys content
             String existingKeysContent = readExistingKeys(session, publicKeyPathServer);
 
             // Check if the key already exists
-            if (!existingKeysContent.contains(new String(Files.readAllBytes(Paths.get(publicKeyPathAndroid))))) {
+            if (publicKeyStream != null && !existingKeysContent.contains(new String(Files.readAllBytes(path)))) {
                 // Append the new key with a newline character at the beginning
-                String newKeyContent = "\n" + new String(Files.readAllBytes(Paths.get(publicKeyPathAndroid)));
+                String newKeyContent = "\n" + new String(Files.readAllBytes(path));
                 String updatedKeysContent = existingKeysContent + newKeyContent;
 
                 // Write the updated content back to the authorized_keys file
@@ -732,9 +734,9 @@ public class MainActivity2 extends Activity {
 
         if (localFile.exists() && localFile.isDirectory()) {
             // File is previously downloaded, confirm overwrite
-            overwriteConfirm3(remoteFilePath, localFilePath);
+            overwriteConfirm3(remoteFilePath, localParentPath);
         } else {
-            downloadDirectory(remoteFilePath, localFilePath);
+            downloadDirectory(remoteFilePath, localParentPath);
         }
     }
 
@@ -757,7 +759,7 @@ public class MainActivity2 extends Activity {
             overwriteButton.setOnClickListener(view -> {
                 final Animation myAnim = AnimationUtils.loadAnimation(MainActivity2.this, R.anim.bounce);
                 overwriteButton.startAnimation(myAnim);
-                // Handle host key acceptance
+
                 // You can continue with the remote file transfer here
                 alertDialog.dismiss(); // Dismiss the dialog
                 downloadFileWithOverwrite(remoteFilePath, localFilePath, showHiddenFiles);
@@ -910,6 +912,7 @@ public class MainActivity2 extends Activity {
                     int bytesRead;
                     long downloadedSize = 0;
 
+
                     // Open an OutputStream to write the file locally using localFilePath
                     try (OutputStream outputStream = Files.newOutputStream(Paths.get(localFilePath))) {
                         // Open an InputStream to read the file remotely
@@ -963,6 +966,7 @@ public class MainActivity2 extends Activity {
             }
         });
     }
+
 
     private boolean downloadDirectory(final String remotePath, final String localParentPath) {
         Executor executor = Executors.newSingleThreadExecutor();
@@ -1058,13 +1062,13 @@ public class MainActivity2 extends Activity {
                 runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "Exception: " + e.getMessage()));
 
             }
-            
+
 
             runOnUiThread(() -> {
                 MainActivity2 activity = activityReference.get();
                 if (activity != null && !activity.isFinishing()) {
                     if (success.get()) {
-                        GreenCustomToast.showCustomToast(getApplicationContext(), "Directory downloaded: " + remotePath);
+                       ShortCustomToast.showCustomToast(getApplicationContext(), "Directory downloaded: " + remotePath);
                     } else {
                         CustomToast.showCustomToast(getApplicationContext(), "Directory download failed.");
                     }
@@ -1079,10 +1083,11 @@ public class MainActivity2 extends Activity {
         return success.get();
     }
 
-    private void updateFileListView(List<String> newDirectoryContents, boolean showHiddenFiles) {
+
+private void updateFileListView(List<String> newDirectoryContents, boolean showHiddenFiles) {
         fileList.clear();  // Clear the list before adding new files
 
-        // Use a case-insensitive comparator for sorting
+            // Use a case-insensitive comparator for sorting
         if (newDirectoryContents != null) {
             newDirectoryContents.sort(String.CASE_INSENSITIVE_ORDER);
 

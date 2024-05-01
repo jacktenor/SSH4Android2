@@ -47,6 +47,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.util.ArrayList;
@@ -403,10 +404,11 @@ public class MainActivity3 extends Activity {
                 session.setConfig("StrictHostKeyChecking", "no");
                 session.setConfig("PreferredAuthentications", "publickey,password");
 
-                if (!Files.exists(Paths.get(privateKeyPathAndroid))) {
+                final Path path = Paths.get(privateKeyPathAndroid);
+                if (!Files.exists(path)) {
                     KeyPair keyPair = KeyPair.genKeyPair(jsch, KeyPair.RSA);
                     keyPair.writePrivateKey(privateKeyPathAndroid);
-                    Files.setPosixFilePermissions(Paths.get(privateKeyPathAndroid), PosixFilePermissions.fromString("rw-------"));
+                    Files.setPosixFilePermissions(path, PosixFilePermissions.fromString("rw-------"));
 
                     byte[] publicKeyBytes = keyPair.getPublicKeyBlob();
                     String publicKeyString = Base64.getEncoder().encodeToString(publicKeyBytes);
@@ -439,7 +441,8 @@ public class MainActivity3 extends Activity {
         ChannelSftp channelSftp = (ChannelSftp) session.openChannel("sftp");
         channelSftp.connect();
 
-        try (InputStream publicKeyStream = Files.newInputStream(Paths.get(publicKeyPathAndroid))) {
+        final Path path = Paths.get(publicKeyPathAndroid);
+        try (InputStream publicKeyStream = Files.newInputStream(path)) {
 
             Log.d("SSH", "publicKeyPathAndroid(upload): " + publicKeyPathAndroid);
             Log.d("SSH", "publicKeyPathServer(upload): " + publicKeyPathServer);
@@ -448,9 +451,9 @@ public class MainActivity3 extends Activity {
             String existingKeysContent = readExistingKeys(session, publicKeyPathServer);
 
             // Check if the key already exists
-            if (!existingKeysContent.contains(new String(Files.readAllBytes(Paths.get(publicKeyPathAndroid))))) {
+            if (publicKeyStream != null && !existingKeysContent.contains(new String(Files.readAllBytes(path)))) {
                 // Append the new key with a newline character at the beginning
-                String newKeyContent = "\n" + new String(Files.readAllBytes(Paths.get(publicKeyPathAndroid)));
+                String newKeyContent = "\n" + new String(Files.readAllBytes(path));
                 String updatedKeysContent = existingKeysContent + newKeyContent;
 
                 // Write the updated content back to the authorized_keys file
@@ -666,7 +669,7 @@ public class MainActivity3 extends Activity {
 
         // Set content and behavior for the dialog elements
         titleTextView.setText(R.string.file_exists);
-        messageTextView.setText(R.string.a_file_with_the_same_name_already_exists_do_you_want_to_overwrite_it);
+        messageTextView.setText(new StringBuilder().append(getString(R.string.the_file)).append(remoteFileDestination).append(getString(R.string.exists_overwrite)));
 
         acceptButton.setText(R.string.overwrite7);
         acceptButton.setOnClickListener(view -> {
