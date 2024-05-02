@@ -1,0 +1,416 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChatHistory">
+    <accountData>
+      <list>
+        <AccountData>
+          <accountId value="VXNlcjo0MDUyODA=" />
+          <chats>
+            <list>
+              <chat>
+                <accountId value="VXNlcjo0MDUyODA=" />
+                <internalId value="16da6cde-13f2-4264-bcb4-2fbdf64e0c73" />
+                <llm>
+                  <llm>
+                    <model value="anthropic/claude-3-sonnet-20240229" />
+                    <provider value="Anthropic" />
+                    <title value="Claude 3 Sonnet" />
+                  </llm>
+                </llm>
+                <messages>
+                  <list>
+                    <message>
+                      <speaker value="HUMAN" />
+                      <text value="Show me a complete example of downloadDirectory method that displays only one success toast after directory has been downloaded. Eliminate toasts for subdirectories" />
+                    </message>
+                    <message>
+                      <speaker value="ASSISTANT" />
+                      <text value="Here's an updated version of the `downloadDirectory` method that displays only one success toast after the entire directory (including subdirectories) has been downloaded successfully:&#10;&#10;```java&#10;private void downloadDirectory(final String remotePath, final String localParentPath) {&#10;    Executor executor = Executors.newSingleThreadExecutor();&#10;    AtomicBoolean success = new AtomicBoolean(true); // Using AtomicBoolean for thread safety&#10;&#10;    executor.execute(() -&gt; {&#10;        String keysDirectory = getApplicationContext().getFilesDir().getPath();&#10;        String privateKeyPathAndroid = keysDirectory + &quot;/ssh4android&quot;;&#10;&#10;        WeakReference&lt;MainActivity2&gt; activityReference = new WeakReference&lt;&gt;(MainActivity2.this);&#10;&#10;        try {&#10;            JSch jsch = new JSch();&#10;            Session session = jsch.getSession(username, serverAddress, 22);&#10;            session.setConfig(&quot;StrictHostKeyChecking&quot;, &quot;no&quot;);&#10;            session.setConfig(&quot;PreferredAuthentications&quot;, &quot;publickey,password&quot;);&#10;            jsch.addIdentity(privateKeyPathAndroid);&#10;            session.setPassword(password);&#10;            session.connect();&#10;&#10;            ChannelSftp channelSftp = (ChannelSftp) session.openChannel(&quot;sftp&quot;);&#10;            channelSftp.connect();&#10;&#10;            // Ensure we change to the correct remote directory&#10;            channelSftp.cd(remotePath);&#10;&#10;            // Get the list of files in the remote directory&#10;            Vector&lt;ChannelSftp.LsEntry&gt; fileList = channelSftp.ls(&quot;*&quot;);&#10;&#10;            // Extract the name of the remote directory&#10;            String remoteDirectoryName = new File(remotePath).getName();&#10;&#10;            // Create the local directory with the remote directory's name if it doesn't exist&#10;            Path localDirectoryPath = Paths.get(localParentPath, remoteDirectoryName);&#10;            Files.createDirectories(localDirectoryPath);&#10;&#10;            // Calculate the total size of all files for progress calculation&#10;            long totalSize = fileList.stream()&#10;                    .mapToLong(entry -&gt; entry.getAttrs().getSize())&#10;                    .sum();&#10;&#10;            // Download each file in the remote directory&#10;            for (ChannelSftp.LsEntry entry : fileList) {&#10;                String remoteFile = entry.getFilename();&#10;                String localFile = localDirectoryPath + File.separator + remoteFile;&#10;&#10;                if (entry.getAttrs().isDir()) {&#10;                    // Recursively download subdirectories&#10;                    boolean subdirectorySuccess = downloadDirectory(remotePath + &quot;/&quot; + remoteFile, localDirectoryPath.toString());&#10;                    if (!subdirectorySuccess) {&#10;                        success.set(false);&#10;                    }&#10;                } else {&#10;                    // Set up a buffer for reading the file&#10;                    byte[] buffer = new byte[1024];&#10;                    int bytesRead;&#10;                    runOnUiThread(() -&gt; progressBar.setVisibility(View.VISIBLE));&#10;&#10;                    // Open an OutputStream to write the file locally&#10;                    final Path path = Paths.get(localFile);&#10;                    try (OutputStream outputStream = Files.newOutputStream(path);&#10;                         InputStream inputStream = channelSftp.get(remoteFile)) {&#10;&#10;                        while ((bytesRead = inputStream.read(buffer)) &gt; 0) {&#10;                            outputStream.write(buffer, 0, bytesRead);&#10;&#10;                            // Calculate and publish the download progress for the entire directory&#10;                            long downloadedSize = Files.size(path);&#10;                            int progress = (int) ((downloadedSize * 100) / totalSize);&#10;                            runOnUiThread(() -&gt; progressBar.setProgress(progress));&#10;                        }&#10;                    } catch (IOException e) {&#10;                        Log.e(&quot;SSH4Android&quot;, &quot;Error downloading file: &quot; + e.getMessage());&#10;                        success.set(false); // Mark download as failed&#10;                        runOnUiThread(() -&gt; CustomToast.showCustomToast(getApplicationContext(), &quot;Directory download failed: &quot; + e.getMessage()));&#10;                        break; // Exit the loop if there's an error&#10;                    }&#10;                }&#10;            }&#10;&#10;            // Disconnect the channel and session&#10;            channelSftp&#10;```" />
+                    </message>
+                    <message>
+                      <speaker value="HUMAN" />
+                      <text value="It seems as tho your message was cut short?" />
+                    </message>
+                    <message>
+                      <speaker value="ASSISTANT" />
+                      <text value="Apologies, it seems that the code snippet got truncated. Here's the complete method:&#10;&#10;```java&#10;private void downloadDirectory(final String remotePath, final String localParentPath) {&#10;    Executor executor = Executors.newSingleThreadExecutor();&#10;    AtomicBoolean success = new AtomicBoolean(true); // Using AtomicBoolean for thread safety&#10;&#10;    executor.execute(() -&gt; {&#10;        String keysDirectory = getApplicationContext().getFilesDir().getPath();&#10;        String privateKeyPathAndroid = keysDirectory + &quot;/ssh4android&quot;;&#10;&#10;        WeakReference&lt;MainActivity2&gt; activityReference = new WeakReference&lt;&gt;(MainActivity2.this);&#10;&#10;        try {&#10;            JSch jsch = new JSch();&#10;            Session session = jsch.getSession(username, serverAddress, 22);&#10;            session.setConfig(&quot;StrictHostKeyChecking&quot;, &quot;no&quot;);&#10;            session.setConfig(&quot;PreferredAuthentications&quot;, &quot;publickey,password&quot;);&#10;            jsch.addIdentity(privateKeyPathAndroid);&#10;            session.setPassword(password);&#10;            session.connect();&#10;&#10;            ChannelSftp channelSftp = (ChannelSftp) session.openChannel(&quot;sftp&quot;);&#10;            channelSftp.connect();&#10;&#10;            // Ensure we change to the correct remote directory&#10;            channelSftp.cd(remotePath);&#10;&#10;            // Get the list of files in the remote directory&#10;            Vector&lt;ChannelSftp.LsEntry&gt; fileList = channelSftp.ls(&quot;*&quot;);&#10;&#10;            // Extract the name of the remote directory&#10;            String remoteDirectoryName = new File(remotePath).getName();&#10;&#10;            // Create the local directory with the remote directory's name if it doesn't exist&#10;            Path localDirectoryPath = Paths.get(localParentPath, remoteDirectoryName);&#10;            Files.createDirectories(localDirectoryPath);&#10;&#10;            // Calculate the total size of all files for progress calculation&#10;            long totalSize = fileList.stream()&#10;                    .mapToLong(entry -&gt; entry.getAttrs().getSize())&#10;                    .sum();&#10;&#10;            // Download each file in the remote directory&#10;            for (ChannelSftp.LsEntry entry : fileList) {&#10;                String remoteFile = entry.getFilename();&#10;                String localFile = localDirectoryPath + File.separator + remoteFile;&#10;&#10;                if (entry.getAttrs().isDir()) {&#10;                    // Recursively download subdirectories&#10;                    boolean subdirectorySuccess = downloadDirectory(remotePath + &quot;/&quot; + remoteFile, localDirectoryPath.toString());&#10;                    if (!subdirectorySuccess) {&#10;                        success.set(false);&#10;                    }&#10;                } else {&#10;                    // Set up a buffer for reading the file&#10;                    byte[] buffer = new byte[1024];&#10;                    int bytesRead;&#10;                    runOnUiThread(() -&gt; progressBar.setVisibility(View.VISIBLE));&#10;&#10;                    // Open an OutputStream to write the file locally&#10;                    final Path path = Paths.get(localFile);&#10;                    try (OutputStream outputStream = Files.newOutputStream(path);&#10;                         InputStream inputStream = channelSftp.get(remoteFile)) {&#10;&#10;                        while ((bytesRead = inputStream.read(buffer)) &gt; 0) {&#10;                            outputStream.write(buffer, 0, bytesRead);&#10;&#10;                            // Calculate and publish the download progress for the entire directory&#10;                            long downloadedSize = Files.size(path);&#10;                            int progress = (int) ((downloadedSize * 100) / totalSize);&#10;                            runOnUiThread(() -&gt; progressBar.setProgress(progress));&#10;                        }&#10;                    } catch (IOException e) {&#10;                        Log.e(&quot;SSH4Android&quot;, &quot;Error downloading file: &quot; + e.getMessage());&#10;                        success.set(false); // Mark download as failed&#10;                        runOnUiThread(() -&gt; CustomToast.showCustomToast(getApplicationContext(), &quot;Directory download failed: &quot; + e.getMessage()));&#10;                        break; // Exit the loop if there's an error&#10;                    }&#10;                }&#10;            }&#10;&#10;            // Disconnect the channel and session&#10;            channelSftp.disconnect();&#10;            session.disconnect();&#10;        } catch&#10;```" />
+                    </message>
+                  </list>
+                </messages>
+                <updatedAt value="2024-04-25T22:15:47.708642671" />
+              </chat>
+              <chat>
+                <accountId value="VXNlcjo0MDUyODA=" />
+                <internalId value="a58df69a-2867-4fd4-90fe-ab7338d7a60e" />
+                <llm>
+                  <llm>
+                    <model value="anthropic/claude-3-sonnet-20240229" />
+                    <provider value="Anthropic" />
+                    <title value="Claude 3 Sonnet" />
+                  </llm>
+                </llm>
+                <messages>
+                  <list>
+                    <message>
+                      <speaker value="HUMAN" />
+                      <text value="Show me how to fix his line so it works with downloadDirectory.:             downloadFile3(fullFilePath, getLocalDownloadPath(remoteDirectory));&#10;" />
+                    </message>
+                    <message>
+                      <speaker value="ASSISTANT" />
+                      <text value="To use the `downloadDirectory` method instead of `downloadFile3`, you can modify the line as follows:&#10;&#10;```java&#10;downloadDirectory(fullFilePath, getLocalDownloadPath(remoteDirectory), new Callback() {&#10;    @Override&#10;    public void onDownloadCompleted(boolean success) {&#10;        // Handle the download completion here&#10;        if (success) {&#10;            // Download was successful&#10;        } else {&#10;            // Download failed&#10;        }&#10;    }&#10;});&#10;```&#10;&#10;The `downloadDirectory` method takes three arguments:&#10;&#10;1. `remotePath`: The remote file path or directory path to download.&#10;2. `localParentPath`: The local parent directory path where the downloaded files/directories should be saved.&#10;3. `callback`: An instance of the `Callback` interface to handle the download completion.&#10;&#10;In the provided code snippet, `fullFilePath` is passed as the `remotePath`, and `getLocalDownloadPath(remoteDirectory)` is passed as the `localParentPath`.&#10;&#10;The `Callback` interface is implemented as an anonymous inner class, and its `onDownloadCompleted` method is overridden to handle the download completion. Inside this method, you can perform any necessary actions based on the `success` parameter, which indicates whether the download was successful or not.&#10;&#10;Note that the `downloadDirectory` method is designed to download entire directories recursively, so if `fullFilePath` refers to a single file, you might want to use the `downloadFile` or `downloadFileWithOverwrite` method instead." />
+                    </message>
+                  </list>
+                </messages>
+                <updatedAt value="2024-04-26T01:29:00.912731582" />
+              </chat>
+              <chat>
+                <accountId value="VXNlcjo0MDUyODA=" />
+                <internalId value="8ae85124-1cfc-4b5f-a84a-12b745d6336f" />
+                <llm>
+                  <llm>
+                    <model value="anthropic/claude-3-sonnet-20240229" />
+                    <provider value="Anthropic" />
+                    <title value="Claude 3 Sonnet" />
+                  </llm>
+                </llm>
+              </chat>
+              <chat>
+                <accountId value="VXNlcjo0MDUyODA=" />
+                <internalId value="2d7ab7c9-c79f-4641-b5ef-5f87606cff6a" />
+                <llm>
+                  <llm>
+                    <model value="anthropic/claude-3-sonnet-20240229" />
+                    <provider value="Anthropic" />
+                    <title value="Claude 3 Sonnet" />
+                  </llm>
+                </llm>
+              </chat>
+              <chat>
+                <accountId value="VXNlcjo0MDUyODA=" />
+                <internalId value="f9c2475c-079d-4b81-805c-76ad263a004a" />
+                <llm>
+                  <llm>
+                    <model value="anthropic/claude-3-sonnet-20240229" />
+                    <provider value="Anthropic" />
+                    <title value="Claude 3 Sonnet" />
+                  </llm>
+                </llm>
+              </chat>
+              <chat>
+                <accountId value="VXNlcjo0MDUyODA=" />
+                <internalId value="ced7665e-5a54-4bc0-a65a-03eee55b493c" />
+                <llm>
+                  <llm>
+                    <model value="anthropic/claude-3-sonnet-20240229" />
+                    <provider value="Anthropic" />
+                    <title value="Claude 3 Sonnet" />
+                  </llm>
+                </llm>
+              </chat>
+              <chat>
+                <accountId value="VXNlcjo0MDUyODA=" />
+                <internalId value="0e9176e4-767f-47d2-95c4-13ae699f9794" />
+                <llm>
+                  <llm>
+                    <model value="anthropic/claude-3-sonnet-20240229" />
+                    <provider value="Anthropic" />
+                    <title value="Claude 3 Sonnet" />
+                  </llm>
+                </llm>
+              </chat>
+              <chat>
+                <accountId value="VXNlcjo0MDUyODA=" />
+                <internalId value="28e6d90f-24ad-4c63-aa8b-761c4b9b46fd" />
+                <llm>
+                  <llm>
+                    <model value="anthropic/claude-3-sonnet-20240229" />
+                    <provider value="Anthropic" />
+                    <title value="Claude 3 Sonnet" />
+                  </llm>
+                </llm>
+              </chat>
+              <chat>
+                <accountId value="VXNlcjo0MDUyODA=" />
+                <internalId value="3f8fd859-06dc-4dec-b7b3-6db1787eefba" />
+                <llm>
+                  <llm>
+                    <model value="anthropic/claude-3-sonnet-20240229" />
+                    <provider value="Anthropic" />
+                    <title value="Claude 3 Sonnet" />
+                  </llm>
+                </llm>
+              </chat>
+              <chat>
+                <accountId value="VXNlcjo0MDUyODA=" />
+                <internalId value="0f320ff9-2b9b-43a1-aa5d-44ab121eb3c2" />
+                <llm>
+                  <llm>
+                    <model value="anthropic/claude-3-sonnet-20240229" />
+                    <provider value="Anthropic" />
+                    <title value="Claude 3 Sonnet" />
+                  </llm>
+                </llm>
+              </chat>
+              <chat>
+                <accountId value="VXNlcjo0MDUyODA=" />
+                <internalId value="18e9c1dc-ad57-454b-bf95-e2c1ade27434" />
+                <llm>
+                  <llm>
+                    <model value="anthropic/claude-3-sonnet-20240229" />
+                    <provider value="Anthropic" />
+                    <title value="Claude 3 Sonnet" />
+                  </llm>
+                </llm>
+              </chat>
+              <chat>
+                <accountId value="VXNlcjo0MDUyODA=" />
+                <internalId value="f73f9a17-910d-4fab-a54f-87d7c3915017" />
+                <llm>
+                  <llm>
+                    <model value="anthropic/claude-3-sonnet-20240229" />
+                    <provider value="Anthropic" />
+                    <title value="Claude 3 Sonnet" />
+                  </llm>
+                </llm>
+              </chat>
+              <chat>
+                <internalId value="5055f13c-d471-40fd-a715-861327f21c49" />
+                <llm>
+                  <llm>
+                    <model value="anthropic/claude-3-sonnet-20240229" />
+                    <provider value="Anthropic" />
+                    <title value="Claude 3 Sonnet" />
+                  </llm>
+                </llm>
+              </chat>
+              <chat>
+                <internalId value="2cba22c5-d40c-49f7-8ed4-54c25eac3e84" />
+                <llm>
+                  <llm>
+                    <model value="anthropic/claude-3-sonnet-20240229" />
+                    <provider value="Anthropic" />
+                    <title value="Claude 3 Sonnet" />
+                  </llm>
+                </llm>
+              </chat>
+              <chat>
+                <internalId value="e6979d29-f0b5-4795-bcbe-e2e908650257" />
+                <llm>
+                  <llm>
+                    <model value="anthropic/claude-3-sonnet-20240229" />
+                    <provider value="Anthropic" />
+                    <title value="Claude 3 Sonnet" />
+                  </llm>
+                </llm>
+              </chat>
+              <chat>
+                <internalId value="775552ee-b84f-49f2-a236-2b8a1e147b04" />
+                <llm>
+                  <llm>
+                    <model value="anthropic/claude-3-sonnet-20240229" />
+                    <provider value="Anthropic" />
+                    <title value="Claude 3 Sonnet" />
+                  </llm>
+                </llm>
+              </chat>
+            </list>
+          </chats>
+          <defaultLlm>
+            <llm>
+              <model value="anthropic/claude-3-sonnet-20240229" />
+              <provider value="Anthropic" />
+              <title value="Claude 3 Sonnet" />
+            </llm>
+          </defaultLlm>
+        </AccountData>
+      </list>
+    </accountData>
+    <chats>
+      <list>
+        <chat>
+          <internalId value="3c76a559-ea34-4214-b6d4-e1993bae1439" />
+          <llm>
+            <llm>
+              <model value="anthropic/claude-3-sonnet-20240229" />
+              <provider value="Anthropic" />
+              <title value="Claude 3 Sonnet" />
+            </llm>
+          </llm>
+        </chat>
+        <chat>
+          <accountId value="VXNlcjo0MDUyODA=" />
+          <internalId value="16da6cde-13f2-4264-bcb4-2fbdf64e0c73" />
+          <llm>
+            <llm>
+              <model value="anthropic/claude-3-sonnet-20240229" />
+              <provider value="Anthropic" />
+              <title value="Claude 3 Sonnet" />
+            </llm>
+          </llm>
+          <messages>
+            <list>
+              <message>
+                <speaker value="HUMAN" />
+                <text value="Show me a complete example of downloadDirectory method that displays only one success toast after directory has been downloaded. Eliminate toasts for subdirectories" />
+              </message>
+              <message>
+                <speaker value="ASSISTANT" />
+                <text value="Here's an updated version of the `downloadDirectory` method that displays only one success toast after the entire directory (including subdirectories) has been downloaded successfully:&#10;&#10;```java&#10;private void downloadDirectory(final String remotePath, final String localParentPath) {&#10;    Executor executor = Executors.newSingleThreadExecutor();&#10;    AtomicBoolean success = new AtomicBoolean(true); // Using AtomicBoolean for thread safety&#10;&#10;    executor.execute(() -&gt; {&#10;        String keysDirectory = getApplicationContext().getFilesDir().getPath();&#10;        String privateKeyPathAndroid = keysDirectory + &quot;/ssh4android&quot;;&#10;&#10;        WeakReference&lt;MainActivity2&gt; activityReference = new WeakReference&lt;&gt;(MainActivity2.this);&#10;&#10;        try {&#10;            JSch jsch = new JSch();&#10;            Session session = jsch.getSession(username, serverAddress, 22);&#10;            session.setConfig(&quot;StrictHostKeyChecking&quot;, &quot;no&quot;);&#10;            session.setConfig(&quot;PreferredAuthentications&quot;, &quot;publickey,password&quot;);&#10;            jsch.addIdentity(privateKeyPathAndroid);&#10;            session.setPassword(password);&#10;            session.connect();&#10;&#10;            ChannelSftp channelSftp = (ChannelSftp) session.openChannel(&quot;sftp&quot;);&#10;            channelSftp.connect();&#10;&#10;            // Ensure we change to the correct remote directory&#10;            channelSftp.cd(remotePath);&#10;&#10;            // Get the list of files in the remote directory&#10;            Vector&lt;ChannelSftp.LsEntry&gt; fileList = channelSftp.ls(&quot;*&quot;);&#10;&#10;            // Extract the name of the remote directory&#10;            String remoteDirectoryName = new File(remotePath).getName();&#10;&#10;            // Create the local directory with the remote directory's name if it doesn't exist&#10;            Path localDirectoryPath = Paths.get(localParentPath, remoteDirectoryName);&#10;            Files.createDirectories(localDirectoryPath);&#10;&#10;            // Calculate the total size of all files for progress calculation&#10;            long totalSize = fileList.stream()&#10;                    .mapToLong(entry -&gt; entry.getAttrs().getSize())&#10;                    .sum();&#10;&#10;            // Download each file in the remote directory&#10;            for (ChannelSftp.LsEntry entry : fileList) {&#10;                String remoteFile = entry.getFilename();&#10;                String localFile = localDirectoryPath + File.separator + remoteFile;&#10;&#10;                if (entry.getAttrs().isDir()) {&#10;                    // Recursively download subdirectories&#10;                    boolean subdirectorySuccess = downloadDirectory(remotePath + &quot;/&quot; + remoteFile, localDirectoryPath.toString());&#10;                    if (!subdirectorySuccess) {&#10;                        success.set(false);&#10;                    }&#10;                } else {&#10;                    // Set up a buffer for reading the file&#10;                    byte[] buffer = new byte[1024];&#10;                    int bytesRead;&#10;                    runOnUiThread(() -&gt; progressBar.setVisibility(View.VISIBLE));&#10;&#10;                    // Open an OutputStream to write the file locally&#10;                    final Path path = Paths.get(localFile);&#10;                    try (OutputStream outputStream = Files.newOutputStream(path);&#10;                         InputStream inputStream = channelSftp.get(remoteFile)) {&#10;&#10;                        while ((bytesRead = inputStream.read(buffer)) &gt; 0) {&#10;                            outputStream.write(buffer, 0, bytesRead);&#10;&#10;                            // Calculate and publish the download progress for the entire directory&#10;                            long downloadedSize = Files.size(path);&#10;                            int progress = (int) ((downloadedSize * 100) / totalSize);&#10;                            runOnUiThread(() -&gt; progressBar.setProgress(progress));&#10;                        }&#10;                    } catch (IOException e) {&#10;                        Log.e(&quot;SSH4Android&quot;, &quot;Error downloading file: &quot; + e.getMessage());&#10;                        success.set(false); // Mark download as failed&#10;                        runOnUiThread(() -&gt; CustomToast.showCustomToast(getApplicationContext(), &quot;Directory download failed: &quot; + e.getMessage()));&#10;                        break; // Exit the loop if there's an error&#10;                    }&#10;                }&#10;            }&#10;&#10;            // Disconnect the channel and session&#10;            channelSftp&#10;```" />
+              </message>
+              <message>
+                <speaker value="HUMAN" />
+                <text value="It seems as tho your message was cut short?" />
+              </message>
+              <message>
+                <speaker value="ASSISTANT" />
+                <text value="Apologies, it seems that the code snippet got truncated. Here's the complete method:&#10;&#10;```java&#10;private void downloadDirectory(final String remotePath, final String localParentPath) {&#10;    Executor executor = Executors.newSingleThreadExecutor();&#10;    AtomicBoolean success = new AtomicBoolean(true); // Using AtomicBoolean for thread safety&#10;&#10;    executor.execute(() -&gt; {&#10;        String keysDirectory = getApplicationContext().getFilesDir().getPath();&#10;        String privateKeyPathAndroid = keysDirectory + &quot;/ssh4android&quot;;&#10;&#10;        WeakReference&lt;MainActivity2&gt; activityReference = new WeakReference&lt;&gt;(MainActivity2.this);&#10;&#10;        try {&#10;            JSch jsch = new JSch();&#10;            Session session = jsch.getSession(username, serverAddress, 22);&#10;            session.setConfig(&quot;StrictHostKeyChecking&quot;, &quot;no&quot;);&#10;            session.setConfig(&quot;PreferredAuthentications&quot;, &quot;publickey,password&quot;);&#10;            jsch.addIdentity(privateKeyPathAndroid);&#10;            session.setPassword(password);&#10;            session.connect();&#10;&#10;            ChannelSftp channelSftp = (ChannelSftp) session.openChannel(&quot;sftp&quot;);&#10;            channelSftp.connect();&#10;&#10;            // Ensure we change to the correct remote directory&#10;            channelSftp.cd(remotePath);&#10;&#10;            // Get the list of files in the remote directory&#10;            Vector&lt;ChannelSftp.LsEntry&gt; fileList = channelSftp.ls(&quot;*&quot;);&#10;&#10;            // Extract the name of the remote directory&#10;            String remoteDirectoryName = new File(remotePath).getName();&#10;&#10;            // Create the local directory with the remote directory's name if it doesn't exist&#10;            Path localDirectoryPath = Paths.get(localParentPath, remoteDirectoryName);&#10;            Files.createDirectories(localDirectoryPath);&#10;&#10;            // Calculate the total size of all files for progress calculation&#10;            long totalSize = fileList.stream()&#10;                    .mapToLong(entry -&gt; entry.getAttrs().getSize())&#10;                    .sum();&#10;&#10;            // Download each file in the remote directory&#10;            for (ChannelSftp.LsEntry entry : fileList) {&#10;                String remoteFile = entry.getFilename();&#10;                String localFile = localDirectoryPath + File.separator + remoteFile;&#10;&#10;                if (entry.getAttrs().isDir()) {&#10;                    // Recursively download subdirectories&#10;                    boolean subdirectorySuccess = downloadDirectory(remotePath + &quot;/&quot; + remoteFile, localDirectoryPath.toString());&#10;                    if (!subdirectorySuccess) {&#10;                        success.set(false);&#10;                    }&#10;                } else {&#10;                    // Set up a buffer for reading the file&#10;                    byte[] buffer = new byte[1024];&#10;                    int bytesRead;&#10;                    runOnUiThread(() -&gt; progressBar.setVisibility(View.VISIBLE));&#10;&#10;                    // Open an OutputStream to write the file locally&#10;                    final Path path = Paths.get(localFile);&#10;                    try (OutputStream outputStream = Files.newOutputStream(path);&#10;                         InputStream inputStream = channelSftp.get(remoteFile)) {&#10;&#10;                        while ((bytesRead = inputStream.read(buffer)) &gt; 0) {&#10;                            outputStream.write(buffer, 0, bytesRead);&#10;&#10;                            // Calculate and publish the download progress for the entire directory&#10;                            long downloadedSize = Files.size(path);&#10;                            int progress = (int) ((downloadedSize * 100) / totalSize);&#10;                            runOnUiThread(() -&gt; progressBar.setProgress(progress));&#10;                        }&#10;                    } catch (IOException e) {&#10;                        Log.e(&quot;SSH4Android&quot;, &quot;Error downloading file: &quot; + e.getMessage());&#10;                        success.set(false); // Mark download as failed&#10;                        runOnUiThread(() -&gt; CustomToast.showCustomToast(getApplicationContext(), &quot;Directory download failed: &quot; + e.getMessage()));&#10;                        break; // Exit the loop if there's an error&#10;                    }&#10;                }&#10;            }&#10;&#10;            // Disconnect the channel and session&#10;            channelSftp.disconnect();&#10;            session.disconnect();&#10;        } catch&#10;```" />
+              </message>
+            </list>
+          </messages>
+          <updatedAt value="2024-04-25T22:15:47.708642671" />
+        </chat>
+        <chat>
+          <accountId value="VXNlcjo0MDUyODA=" />
+          <internalId value="a58df69a-2867-4fd4-90fe-ab7338d7a60e" />
+          <llm>
+            <llm>
+              <model value="anthropic/claude-3-sonnet-20240229" />
+              <provider value="Anthropic" />
+              <title value="Claude 3 Sonnet" />
+            </llm>
+          </llm>
+          <messages>
+            <list>
+              <message>
+                <speaker value="HUMAN" />
+                <text value="Show me how to fix his line so it works with downloadDirectory.:             downloadFile3(fullFilePath, getLocalDownloadPath(remoteDirectory));&#10;" />
+              </message>
+              <message>
+                <speaker value="ASSISTANT" />
+                <text value="To use the `downloadDirectory` method instead of `downloadFile3`, you can modify the line as follows:&#10;&#10;```java&#10;downloadDirectory(fullFilePath, getLocalDownloadPath(remoteDirectory), new Callback() {&#10;    @Override&#10;    public void onDownloadCompleted(boolean success) {&#10;        // Handle the download completion here&#10;        if (success) {&#10;            // Download was successful&#10;        } else {&#10;            // Download failed&#10;        }&#10;    }&#10;});&#10;```&#10;&#10;The `downloadDirectory` method takes three arguments:&#10;&#10;1. `remotePath`: The remote file path or directory path to download.&#10;2. `localParentPath`: The local parent directory path where the downloaded files/directories should be saved.&#10;3. `callback`: An instance of the `Callback` interface to handle the download completion.&#10;&#10;In the provided code snippet, `fullFilePath` is passed as the `remotePath`, and `getLocalDownloadPath(remoteDirectory)` is passed as the `localParentPath`.&#10;&#10;The `Callback` interface is implemented as an anonymous inner class, and its `onDownloadCompleted` method is overridden to handle the download completion. Inside this method, you can perform any necessary actions based on the `success` parameter, which indicates whether the download was successful or not.&#10;&#10;Note that the `downloadDirectory` method is designed to download entire directories recursively, so if `fullFilePath` refers to a single file, you might want to use the `downloadFile` or `downloadFileWithOverwrite` method instead." />
+              </message>
+            </list>
+          </messages>
+          <updatedAt value="2024-04-26T01:29:00.912731582" />
+        </chat>
+        <chat>
+          <accountId value="VXNlcjo0MDUyODA=" />
+          <internalId value="8ae85124-1cfc-4b5f-a84a-12b745d6336f" />
+          <llm>
+            <llm>
+              <model value="anthropic/claude-3-sonnet-20240229" />
+              <provider value="Anthropic" />
+              <title value="Claude 3 Sonnet" />
+            </llm>
+          </llm>
+        </chat>
+        <chat>
+          <accountId value="VXNlcjo0MDUyODA=" />
+          <internalId value="2d7ab7c9-c79f-4641-b5ef-5f87606cff6a" />
+          <llm>
+            <llm>
+              <model value="anthropic/claude-3-sonnet-20240229" />
+              <provider value="Anthropic" />
+              <title value="Claude 3 Sonnet" />
+            </llm>
+          </llm>
+        </chat>
+        <chat>
+          <accountId value="VXNlcjo0MDUyODA=" />
+          <internalId value="f9c2475c-079d-4b81-805c-76ad263a004a" />
+          <llm>
+            <llm>
+              <model value="anthropic/claude-3-sonnet-20240229" />
+              <provider value="Anthropic" />
+              <title value="Claude 3 Sonnet" />
+            </llm>
+          </llm>
+        </chat>
+        <chat>
+          <accountId value="VXNlcjo0MDUyODA=" />
+          <internalId value="ced7665e-5a54-4bc0-a65a-03eee55b493c" />
+          <llm>
+            <llm>
+              <model value="anthropic/claude-3-sonnet-20240229" />
+              <provider value="Anthropic" />
+              <title value="Claude 3 Sonnet" />
+            </llm>
+          </llm>
+        </chat>
+        <chat>
+          <accountId value="VXNlcjo0MDUyODA=" />
+          <internalId value="0e9176e4-767f-47d2-95c4-13ae699f9794" />
+          <llm>
+            <llm>
+              <model value="anthropic/claude-3-sonnet-20240229" />
+              <provider value="Anthropic" />
+              <title value="Claude 3 Sonnet" />
+            </llm>
+          </llm>
+        </chat>
+        <chat>
+          <accountId value="VXNlcjo0MDUyODA=" />
+          <internalId value="28e6d90f-24ad-4c63-aa8b-761c4b9b46fd" />
+          <llm>
+            <llm>
+              <model value="anthropic/claude-3-sonnet-20240229" />
+              <provider value="Anthropic" />
+              <title value="Claude 3 Sonnet" />
+            </llm>
+          </llm>
+        </chat>
+        <chat>
+          <accountId value="VXNlcjo0MDUyODA=" />
+          <internalId value="3f8fd859-06dc-4dec-b7b3-6db1787eefba" />
+          <llm>
+            <llm>
+              <model value="anthropic/claude-3-sonnet-20240229" />
+              <provider value="Anthropic" />
+              <title value="Claude 3 Sonnet" />
+            </llm>
+          </llm>
+        </chat>
+        <chat>
+          <accountId value="VXNlcjo0MDUyODA=" />
+          <internalId value="0f320ff9-2b9b-43a1-aa5d-44ab121eb3c2" />
+          <llm>
+            <llm>
+              <model value="anthropic/claude-3-sonnet-20240229" />
+              <provider value="Anthropic" />
+              <title value="Claude 3 Sonnet" />
+            </llm>
+          </llm>
+        </chat>
+        <chat>
+          <accountId value="VXNlcjo0MDUyODA=" />
+          <internalId value="18e9c1dc-ad57-454b-bf95-e2c1ade27434" />
+          <llm>
+            <llm>
+              <model value="anthropic/claude-3-sonnet-20240229" />
+              <provider value="Anthropic" />
+              <title value="Claude 3 Sonnet" />
+            </llm>
+          </llm>
+        </chat>
+        <chat>
+          <accountId value="VXNlcjo0MDUyODA=" />
+          <internalId value="f73f9a17-910d-4fab-a54f-87d7c3915017" />
+          <llm>
+            <llm>
+              <model value="anthropic/claude-3-sonnet-20240229" />
+              <provider value="Anthropic" />
+              <title value="Claude 3 Sonnet" />
+            </llm>
+          </llm>
+        </chat>
+      </list>
+    </chats>
+    <defaultLlm>
+      <llm>
+        <model value="anthropic/claude-3-sonnet-20240229" />
+        <provider value="Anthropic" />
+        <title value="Claude 3 Sonnet" />
+      </llm>
+    </defaultLlm>
+  </component>
+</project>

@@ -35,7 +35,7 @@
     <string name="download_file7">Download File</string>
     <string name="output">Output</string>
     <string name="again">Again?</string>
-    <string name="copy2">Copy</string>
+    <string name="copy">Copy</string>
     <string name="save_npassword22">Save\nPassword?</string>
     <string name="hidden_nfiles">Hidden\nfiles?</string>
     <string name="overwrite_existing_file">Overwrite existing file?</string>
