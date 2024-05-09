@@ -4,10 +4,10 @@
     <selectionStates>
       <SelectionState runConfigName="SSH4Android">
         <option name="selectionMode" value="DROPDOWN" />
-        <DropdownSelection timestamp="2024-05-01T03:39:56.794999602Z">
+        <DropdownSelection timestamp="2024-05-02T17:26:56.145185864Z">
           <Target type="DEFAULT_BOOT">
             <handle>
-              <DeviceId pluginId="LocalEmulator" identifier="path=/home/john/.android/avd/Pixel_8_API_28.avd" />
+              <DeviceId pluginId="LocalEmulator" identifier="path=/home/john/.android/avd/Pixel_7_API_34.avd" />
             </handle>
           </Target>
         </DropdownSelection>

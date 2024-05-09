@@ -41,7 +41,7 @@
     <string name="overwrite_existing_file">Overwrite existing file?</string>
     <string name="overwrite_or_cancel">Overwrite or cancel.</string>
     <string name="overwrite">Overwrite</string>
-    <string name="overwrite2">Overwrite existing file?</string>
+    <string name="overwrite2">Overwrite existing directory?</string>
     <string name="overwrite3">Overwrite\n</string>
     <string name="overwrite4">\n?</string>
     <string name="overwrite5">Overwrite all files in\n</string>

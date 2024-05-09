@@ -137,6 +137,7 @@ public class MainActivity3 extends Activity {
 
         enterButton.setOnClickListener(view -> handleInput());
     }
+
     private void checkAndRequestPermission() {
         if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
                 != PackageManager.PERMISSION_GRANTED) {
@@ -155,7 +156,7 @@ public class MainActivity3 extends Activity {
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == REQUEST_WRITE_EXTERNAL_STORAGE) {
+        if (requestCode == REQUEST_WRITE_EXTERNAL_STORAGE)
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 // Permission was granted, proceed with file operation
                 // For example, call connectAndListDirectory();
@@ -164,8 +165,8 @@ public class MainActivity3 extends Activity {
                 // Permission denied, show a message or take appropriate action
                 loadInputHistory(); //TODO
             }
-        }
     }
+
     private Set<String> loadInputHistory() {
         return getSharedPreferences("InputHistory", MODE_PRIVATE)
                 .getStringSet(INPUT_HISTORY_KEY, new HashSet<>());

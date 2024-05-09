@@ -165,7 +165,7 @@ public class MainActivity5 extends Activity {
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == REQUEST_WRITE_EXTERNAL_STORAGE) {
+        if (requestCode == REQUEST_WRITE_EXTERNAL_STORAGE)
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 // Permission was granted, proceed with file operation
                 // For example, call connectAndListDirectory();
@@ -175,7 +175,7 @@ public class MainActivity5 extends Activity {
                 loadInputHistory(); //TODO
             }
         }
-    }
+
 
     private Set<String> loadInputHistory() {
         return getSharedPreferences("InputHistory", MODE_PRIVATE)
