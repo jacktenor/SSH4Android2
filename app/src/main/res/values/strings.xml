@@ -51,5 +51,11 @@
     <string name="cancel4">Cancel</string>
     <string name="the_file">The file\n</string>
     <string name="exists_overwrite">\nalready exists.\nOverwrite?</string>
+    <string name="rename">RENAME</string>
+    <string name="rename_or_overwrite">File or directory exists!</string>
+    <string name="rename_or_overwrite_message">\n</string>
+    <string name="rename_or_overwrite_message_continuation">\nRename , overwrite, or cancel?</string>
+    <string name="progress">Progress</string>
+
 
 </resources>
