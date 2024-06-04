@@ -347,10 +347,10 @@ public class MainActivity2 extends Activity {
 
         switch (currentQuestionIndex - 1) {
             case 0:
-                serverAddress = "10.0.0.190";
+                serverAddress = input;
                 break;
             case 1:
-                username = "tom";
+                username = input;
                 savePasswordCheckbox.setVisibility(VISIBLE);
                 inputAutoComplete.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
                 break;
