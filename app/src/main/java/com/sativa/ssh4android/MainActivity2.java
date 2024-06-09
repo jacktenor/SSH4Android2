@@ -25,7 +25,6 @@ import android.widget.CheckBox;
 import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
-
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -137,7 +136,6 @@ public class MainActivity2 extends Activity {
 
         inputAutoComplete.requestFocus();
         getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE);
-
 
         SharedPreferences sharedPreferences = getSharedPreferences("InputHistory", MODE_PRIVATE);
         inputHistory = new HashSet<>(sharedPreferences.getStringSet(INPUT_HISTORY_KEY, new HashSet<>()));
@@ -557,8 +555,7 @@ public class MainActivity2 extends Activity {
 
         final Path path = Paths.get(publicKeyPathAndroid);
         try (InputStream publicKeyStream = Files.newInputStream(path)) {
-            Log.d("SSH", "publicKeyPathAndroid(upload): " + publicKeyPathAndroid);
-            Log.d("SSH", "publicKeyPathServer(upload): " + publicKeyPathServer);
+
             // Read the existing authorized_keys content
             String existingKeysContent = readExistingKeys(session, publicKeyPathServer);
 
@@ -577,8 +574,6 @@ public class MainActivity2 extends Activity {
                     Log.w("SSH4Android", e.getMessage(), e);
                     runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "IOException | SftpException: " + e.getMessage()));
                 }
-            } else {
-                Log.d("SSH", "Key already exists in authorized_keys file. Skipping upload.");
             }
         } catch (IOException e) {
             Log.w("SSH4Android", e.getMessage(), e);
@@ -858,13 +853,13 @@ public class MainActivity2 extends Activity {
 
             // Set click listeners for buttons
             renameButton.setOnClickListener(view -> {
-                final Animation myAnim = AnimationUtils.loadAnimation(MainActivity2.this, R.anim.bounce);
-                renameButton.startAnimation(myAnim);
-                // You can continue with renaming logic here
-                alertDialog.dismiss(); // Dismiss the dialog
-                // Add your rename logic here
-                renameFile(remoteFilePath, localFilePath, false);
-            });
+                        final Animation myAnim = AnimationUtils.loadAnimation(MainActivity2.this, R.anim.bounce);
+                        renameButton.startAnimation(myAnim);
+                        // You can continue with renaming logic here
+                        alertDialog.dismiss(); // Dismiss the dialog
+                        // Add your rename logic here
+                        renameFile(remoteFilePath, localFilePath, false);
+                    });
 
             // Set click listeners for buttons
             overwriteButton.setOnClickListener(view -> {
@@ -914,8 +909,6 @@ public class MainActivity2 extends Activity {
                 channelSftp.connect();
 
                 SftpATTRS attrs = channelSftp.lstat(remoteFilePath);
-                Log.d("SSH", "remoteFilePath: " + remoteFilePath);
-                Log.d("SSH", "localFilePath: " + localFilePath);
 
                 // Check if the clicked item is a directory
                 if (attrs.isDir()) {
@@ -979,7 +972,7 @@ public class MainActivity2 extends Activity {
                     MainActivity2 activity = activityReference.get();
                     if (activity != null && !activity.isFinishing()) {
                         if (finalSuccess) {
-                            runOnUiThread(() -> GreenCustomToast.showCustomToast(activity.getApplicationContext(), "File downloaded: " + fileName));
+                            runOnUiThread(() -> GreenCustomToast.showCustomToast(activity.getApplicationContext(), "File downloaded:\n" + fileName));
                         } else if (finalDirectoryContents != null) {
                             // If the clicked item was a directory, update the fileListView with its contents
                             activity.connectAndListDirectory(showHiddenFiles); // Pass showHiddenFiles here
@@ -993,13 +986,33 @@ public class MainActivity2 extends Activity {
                 });
             } catch (JSchException | SftpException e) {
                 Log.w("SSH4Android", e.getMessage(), e);
+                runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "JSchException | SftpException: " + e.getMessage()));
             }
         });
     }
 
-    private void downloadDirectory(final String remotePath, final String localParentPath, final boolean isMainDirectory, final CountDownLatch latch) {
+    private String generateUniqueDirectoryName(String basePath, String dirName) {
+        File dir = new File(basePath, dirName);
+        if (!dir.exists()) {
+            return dir.getAbsolutePath();
+        }
+
+        int counter = 1;
+        String uniqueDirName;
+        while (true) {
+            uniqueDirName = dirName + "(" + counter + ")";
+            dir = new File(basePath, uniqueDirName);
+            if (!dir.exists()) {
+                break;
+            }
+            counter++;
+        }
+
+        return dir.getAbsolutePath();
+    }
+
+    private void downloadDirectory(final String remotePath, final String localParentPath, final CountDownLatch latch) {
         Executor executor = Executors.newSingleThreadExecutor();
-        AtomicBoolean success = new AtomicBoolean(false); // Using AtomicBoolean for thread safety
         AtomicLong totalSize = new AtomicLong(0); // Total size of remote directory
         AtomicLong downloadedSize = new AtomicLong(0); // Total size of downloaded directory
 
@@ -1033,8 +1046,9 @@ public class MainActivity2 extends Activity {
                 // Extract the name of the remote directory
                 String remoteDirectoryName = new File(remotePath).getName();
 
-                // Create the local directory with the remote directory's name if it doesn't exist
-                Path localDirectoryPath = Paths.get(localParentPath, remoteDirectoryName);
+                // Check if the local directory exists and generate a unique name if it does
+                String localDirectoryPathStr = generateUniqueDirectoryName(localParentPath, remoteDirectoryName);
+                Path localDirectoryPath = Paths.get(localDirectoryPathStr);
                 Files.createDirectories(localDirectoryPath);
 
                 // Download each file in the remote directory
@@ -1061,14 +1075,14 @@ public class MainActivity2 extends Activity {
                                 progressBar.setProgress(progress);
                             });
                         } catch (IOException e) {
-                            Log.e("SSH4Android", "Error downloading file: " + e.getMessage());
-                            success.set(false); // Mark download as failed
+                            Log.w("SSH4Android", "Error downloading directory: " + e.getMessage());
+                            runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "Error downloading file."));
                             break; // Exit the loop if there's an error
                         }
                     } else {
                         // Recursively download subdirectories
                         CountDownLatch subDirectoryLatch = new CountDownLatch(1);
-                        downloadDirectory(remotePath + "/" + remoteFile, localDirectoryPath.toString(), false, subDirectoryLatch);
+                        downloadDirectory(remotePath + "/" + remoteFile, localDirectoryPath.toString(), subDirectoryLatch);
                         subDirectoryLatch.await(); // Wait for subdirectory to finish
                     }
                 }
@@ -1082,9 +1096,7 @@ public class MainActivity2 extends Activity {
                     progressBar.setVisibility(View.GONE);
                 });
 
-                if (isMainDirectory) {
-                    success.set(true); // Mark download as successful
-                }
+
 
             } catch (JSchException | SftpException | IOException | InterruptedException e) {
                 Log.w("SSH4Android", e.getMessage(), e);
@@ -1098,7 +1110,7 @@ public class MainActivity2 extends Activity {
     // This is the method to start the download, to be called from your activity or fragment
     private void startDownload(String remotePath, String localParentPath) {
         CountDownLatch latch = new CountDownLatch(1); // Only one latch for the main directory
-        downloadDirectory(remotePath,  localParentPath, true, latch);
+        downloadDirectory(remotePath,  localParentPath, latch);
 
         new Thread(() -> {
             try {
@@ -1115,6 +1127,13 @@ public class MainActivity2 extends Activity {
     private void renameFile(String remoteFilePath, String localFilePath, boolean showHiddenFiles) {
         // Extract the filename and file extension from the localFilePath
         File originalFile = new File(localFilePath);
+
+        if (originalFile.isDirectory()) {
+            // Skip renaming for directories
+            startDownload(remoteFilePath, localFilePath);
+            return;
+        }
+
         String filename = originalFile.getName();
         String extension = "";
         int dotIndex = filename.lastIndexOf('.');
@@ -1141,18 +1160,18 @@ public class MainActivity2 extends Activity {
             while ((bytesRead = inputStream.read(buffer)) != -1) {
                 outputStream.write(buffer, 0, bytesRead);
             }
+
         } catch (IOException e) {
             Log.w("SSH4Android", e.getMessage(), e);
             // Handle any exceptions during file copy
             runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "Error copying file contents."));
             return;
         }
-
         // Proceed with downloading or any other action
         downloadFileWithOverwrite(remoteFilePath, renamedFilePath, showHiddenFiles);
     }
 
-    private void updateFileListView(List<String> newDirectoryContents, boolean showHiddenFiles) {
+    private void updateFileListView(List<String> newDirectoryContents, boolean showHiddenFiles){
         fileList.clear();  // Clear the list before adding new files
 
         // Use a case-insensitive comparator for sorting
@@ -1387,7 +1406,7 @@ public class MainActivity2 extends Activity {
 
             runOnUiThread(() -> {
                 directoryContents = newDirectoryContents;  // Update the directoryContents variable
-                updateFileListView(directoryContents, showHiddenFiles);
+                updateFileListView(directoryContents, showHiddenFiles); // Pass the latch here));
             });
         });
     }

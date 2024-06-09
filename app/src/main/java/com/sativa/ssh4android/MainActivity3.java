@@ -163,7 +163,7 @@ public class MainActivity3 extends Activity {
                 loadInputHistory();
             } else {
                 // Permission denied, show a message or take appropriate action
-                loadInputHistory(); //TODO
+                loadInputHistory(); 
             }
     }
 
