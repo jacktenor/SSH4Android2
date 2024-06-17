@@ -5,6 +5,7 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:visibility="visible"
     tools:context=".MainActivity5"
     tools:layout_editor_absoluteY="25dp">
 
@@ -12,14 +13,13 @@
         android:id="@+id/enterButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="25dp"
+        android:layout_marginTop="58dp"
         android:background="@android:color/transparent"
         android:text="@string/submit"
         android:textAlignment="center"
         android:textColor="#FFFFFF"
         app:cornerRadius="8dp"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/inputAutoComplete" />
 
@@ -46,6 +46,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="50dp"
+        android:layout_marginBottom="50dp"
         android:background="@android:color/transparent"
         android:minWidth="50sp"
         android:text="@string/main_menu22"
@@ -70,33 +71,26 @@
         app:layout_constraintStart_toStartOf="parent" />
 
     <ScrollView
-        android:layout_width="350dp"
-        android:layout_height="475dp"
-        android:layout_below="@+id/inputAutoComplete"
-        android:layout_marginTop="75dp"
+        android:id="@+id/outputScrollView"
+        android:layout_width="wrap_content"
+        android:layout_height="500dp"
+        android:layout_marginTop="125dp"
+        android:background="@android:color/transparent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintHorizontal_bias="0.5"
+        app:layout_constraintHorizontal_bias="0.498"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent"
-        tools:visibility="gone">
+        app:layout_constraintTop_toTopOf="parent">
 
         <TextView
             android:id="@+id/outputTextView"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:gravity="center"
-            android:isScrollContainer="true"
-            android:scrollIndicators="right"
-            android:scrollbarStyle="outsideInset"
-            android:scrollbars="vertical"
-            android:text="@string/output"
-            android:textAlignment="center"
+            android:background="@android:color/transparent"
+            android:hint="@string/output22"
+            android:padding="8dp"
             android:textColor="#FFFFFF"
-            android:textColorHighlight="#757575"
             android:textColorHint="#757575"
             android:textIsSelectable="true"
-            android:textSize="16sp"
-            android:verticalScrollbarPosition="right"
             android:visibility="gone" />
     </ScrollView>
 
@@ -105,6 +99,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginEnd="50dp"
+        android:layout_marginBottom="50dp"
         android:background="@android:color/transparent"
         android:minWidth="50sp"
         android:text="@string/again"

@@ -56,6 +56,16 @@
     <string name="rename_or_overwrite_message">\n</string>
     <string name="rename_or_overwrite_message_continuation">\nRename , overwrite, or cancel?</string>
     <string name="progress">Progress</string>
+    <string name="output1">Output:</string>
+    <string name="output22">Output</string>
+    <string name="aaddkey">AAddKey</string>
+    <string name="you_can_add_a_key_for_nfuture_authorizations">You can add a key for/nfuture authorizations.</string>
+    <string name="accept_and_add_authorization_key">Accept and add authorization key.</string>
+    <string name="add_key">ADD KEY</string>
+    <string name="accept6000">ACCEPT</string>
+    <string name="deny6000">DENY</string>
+    <string name="accept_and_add_nauthentication_key">Accept and add\nauthentication key?</string>
+    <string name="_22">22</string>
 
 
 </resources>

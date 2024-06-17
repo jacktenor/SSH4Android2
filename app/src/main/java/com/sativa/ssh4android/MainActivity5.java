@@ -1,9 +1,6 @@
 package com.sativa.ssh4android;
 
-import static java.lang.Thread.sleep;
 import android.Manifest;
-import android.app.Activity;
-import android.app.AlertDialog;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
@@ -12,7 +9,7 @@ import android.text.InputType;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
-import android.view.WindowManager.LayoutParams;
+import android.view.WindowManager;
 import android.view.animation.Animation;
 import android.view.animation.AnimationUtils;
 import android.view.inputmethod.InputMethodManager;
@@ -20,8 +17,11 @@ import android.widget.ArrayAdapter;
 import android.widget.AutoCompleteTextView;
 import android.widget.Button;
 import android.widget.CheckBox;
+import android.widget.ScrollView;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import com.google.gson.Gson;
@@ -33,7 +33,6 @@ import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.KeyPair;
 import com.jcraft.jsch.Session;
 import com.jcraft.jsch.SftpException;
-
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.FileWriter;
@@ -49,33 +48,36 @@ import java.util.Base64;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public class MainActivity5 extends Activity {
+public class MainActivity5 extends AppCompatActivity {
+
     private AutoCompleteTextView inputAutoComplete;
     private Button enterButton;
-    private List<String> questions;
-    private int currentQuestionIndex;
-    private static final String INPUT_HISTORY_KEY = "input_history";
-    private String username;
+    private Button button6;
+    private Button button;
+    private TextView outputTextView;
+    private TextView textView2;
+    private CheckBox savePasswordCheckbox;
+    private ScrollView outputScrollView;
     private String serverAddress;
+    private String username;
     private String password;
     private String command;
-    private AlertDialog alertDialog;
+    private String port;
     private Set<String> inputHistory;
-    static final int REQUEST_WRITE_EXTERNAL_STORAGE = 1;
-    private CheckBox savePasswordCheckbox;
-    private View button;
-    private TextView outputTextView;
-    private Button button6;
-    private TextView textView2;
+    private int currentQuestionIndex;
+    private List<String> questions;
+    private AlertDialog alertDialog;
+    private static final String INPUT_HISTORY_KEY = "inputHistory";
+    private static final int REQUEST_WRITE_EXTERNAL_STORAGE = 1;
 
     @Override
-    public void onCreate(Bundle savedInstanceState) {
+    protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main5);
 
@@ -86,16 +88,14 @@ public class MainActivity5 extends Activity {
         savePasswordCheckbox = findViewById(R.id.savePasswordCheckbox);
         outputTextView = findViewById(R.id.outputTextView);
         textView2 = findViewById(R.id.textView2);
-
-        Executor executor = Executors.newSingleThreadExecutor();
-        CompletableFuture.runAsync(this::performSSHOperations, executor);
+        outputScrollView = findViewById(R.id.outputScrollView);
 
         getWindow().setBackgroundDrawableResource(R.drawable.panther);
 
         inputAutoComplete.setInputType(InputType.TYPE_CLASS_TEXT);
 
         inputAutoComplete.requestFocus();
-        getWindow().setSoftInputMode(LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE);
+        getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE);
 
         runOnUiThread(() -> button6.setVisibility(View.GONE));
         runOnUiThread(() -> button.setVisibility(View.GONE));
@@ -119,13 +119,11 @@ public class MainActivity5 extends Activity {
         SharedPreferences sharedPreferences = getSharedPreferences("InputHistory", MODE_PRIVATE);
         inputHistory = new HashSet<>(sharedPreferences.getStringSet(INPUT_HISTORY_KEY, new HashSet<>()));
 
-        // Set up AutoCompleteTextView with input history for non-password inputs
         if (currentQuestionIndex != 3) {
             Set<String> inputHistory = loadInputHistory();
             ArrayAdapter<String> autoCompleteAdapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, new ArrayList<>(inputHistory));
             inputAutoComplete.setAdapter(autoCompleteAdapter);
         } else {
-            // Remove the password from the adapter during the password entry phase
             inputAutoComplete.setAdapter(null);
         }
 
@@ -133,49 +131,47 @@ public class MainActivity5 extends Activity {
         questions.add("SSH server address?");
         questions.add("Username?");
         questions.add("Password?");
+        questions.add("Port?");
         questions.add("Command?");
-
         currentQuestionIndex = 0;
         setNextQuestion();
 
         saveInputHistory(new ArrayList<>(inputHistory));
 
-        enterButton.setOnClickListener(view -> handleInput());
+        enterButton.setOnClickListener(view -> {
+            try {
+                handleInput();
+            } catch (IOException e) {
+                runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "IOException: " + e.getMessage()));
+            }
+        });
         final Animation myAnim = AnimationUtils.loadAnimation(this, R.anim.bounce);
         enterButton.startAnimation(myAnim);
-        // Check and request permission before initiating any file operations
+
         checkAndRequestPermission();
     }
 
     private void checkAndRequestPermission() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
                 != PackageManager.PERMISSION_GRANTED) {
-            // Permission is not granted, request it
             ActivityCompat.requestPermissions(this,
                     new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
                     REQUEST_WRITE_EXTERNAL_STORAGE);
         } else {
-            // Permission is already granted, proceed with file operation
-            // For example, call connectAndListDirectory();
             loadInputHistory();
         }
     }
 
-    // Override onRequestPermissionsResult to handle the result of the permission request
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == REQUEST_WRITE_EXTERNAL_STORAGE)
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                // Permission was granted, proceed with file operation
-                // For example, call connectAndListDirectory();
                 loadInputHistory();
             } else {
-                // Permission denied, show a message or take appropriate action
-                loadInputHistory(); //TODO
+                loadInputHistory();
             }
-        }
-
+    }
 
     private Set<String> loadInputHistory() {
         return getSharedPreferences("InputHistory", MODE_PRIVATE)
@@ -192,7 +188,14 @@ public class MainActivity5 extends Activity {
 
     private void setNextQuestion() {
         inputAutoComplete.setHint(questions.get(currentQuestionIndex));
-        inputAutoComplete.setText("");
+
+        // Set default port to 22 if the current question is about the port
+        if (currentQuestionIndex == 3) {
+            inputAutoComplete.setText(R.string._22);
+        } else {
+            inputAutoComplete.setText("");
+        }
+
         currentQuestionIndex++;
 
         // Save the new password for the current server address and username
@@ -203,8 +206,8 @@ public class MainActivity5 extends Activity {
         Credential savedCredentials = Credential.getSavedCredentials(getApplicationContext());
 
         if (savedCredentials != null && currentQuestionIndex == 3
-                && savedCredentials.getServerAddress().equals(serverAddress)
-                && savedCredentials.getUsername().equals(username)) {
+                && savedCredentials.serverAddress().equals(serverAddress)
+                && savedCredentials.username().equals(username)) {
             // Fill the password only if the saved server address and username match the current ones
             String savedPassword = getPassword(serverAddress, username);
             if (savedPassword != null) {
@@ -222,18 +225,15 @@ public class MainActivity5 extends Activity {
             inputAutoComplete.setAdapter(null);
         }
     }
+
     private void updateInputHistory(String newInput) {
         inputHistory.add(newInput);
         saveInputHistory(new ArrayList<>(inputHistory));
     }
 
-    private void handleInput() {
+    private void handleInput() throws IOException {
         String input = inputAutoComplete.getText().toString();
-
-        // Update input history
         updateInputHistory(input);
-
-        // Update input history
         Set<String> inputHistory = loadInputHistory();
         inputHistory.add(input);
         saveInputHistory(new ArrayList<>(inputHistory));
@@ -260,8 +260,10 @@ public class MainActivity5 extends Activity {
                 inputAutoComplete.setInputType(InputType.TYPE_CLASS_TEXT);
                 break;
             case 3:
+                port = input.isEmpty() ? "22" : input;  // Use default port 22 if input is empty
+                break;
+            case 4:
                 command = input;
-                // Hide the keyboard after the fourth question is answered
                 InputMethodManager imm = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
                 if (imm != null) {
                     imm.hideSoftInputFromWindow(inputAutoComplete.getWindowToken(), 0);
@@ -270,11 +272,8 @@ public class MainActivity5 extends Activity {
         }
 
         if (currentQuestionIndex < questions.size()) {
-            // Set next question
             setNextQuestion();
         } else {
-            // All questions answered, initiate connection and command execution
-
             inputAutoComplete.setText("");
             inputAutoComplete.setVisibility(View.GONE);
             enterButton.setVisibility(View.GONE);
@@ -283,18 +282,12 @@ public class MainActivity5 extends Activity {
         }
     }
 
-    // Add a method to save the password to SharedPreferences
     private void savePassword() {
         SharedPreferences sharedPreferences = getSharedPreferences("SavedCredentials", MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPreferences.edit();
 
-        // Retrieve existing passwords map
         Map<String, String> passwordsMap = getPasswordsMap();
-
-        // Save the new password for the current server address and username
         passwordsMap.put(serverAddress + "_" + username, password);
-
-        // Save the updated passwords map
         savePasswordsMap(passwordsMap);
 
         editor.putString("savedServerAddress", serverAddress);
@@ -318,14 +311,12 @@ public class MainActivity5 extends Activity {
     }
 
     private String getPassword(String serverAddress, String username) {
-        // Retrieve passwords map
         Map<String, String> passwordsMap = getPasswordsMap();
-
-        // Get the password for the given server address and username
         return passwordsMap.get(serverAddress + "_" + username);
     }
 
     private void connectAndExecuteCommand() {
+
         Executor executor = Executors.newSingleThreadExecutor();
 
         executor.execute(() -> {
@@ -334,7 +325,7 @@ public class MainActivity5 extends Activity {
 
             try {
                 JSch jsch = new JSch();
-                session = jsch.getSession(username, serverAddress, 22);
+                session = jsch.getSession(username, serverAddress, Integer.parseInt(port));
                 session.setConfig("StrictHostKeyChecking", "yes");
                 session.setConfig("PreferredAuthentications", "publickey,password");
                 session.setPassword(password);
@@ -346,53 +337,109 @@ public class MainActivity5 extends Activity {
                     runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "Host key error."));
                 }
             }
+            String finalHostKey = hostKey;
+            runOnUiThread(() -> showHostKeyDialog(finalHostKey));
 
-            final String finalHostKey = hostKey;
-            runOnUiThread(() -> {
-                if (finalHostKey != null) {
-                    // Show the host key dialog for verification
-                    showHostKeyDialog(finalHostKey);
-                } else {
-                    runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "Host key error."));
+            try {
+                synchronized (Objects.requireNonNull(session)) {
+                    session.wait();
                 }
-            });
+
+                ChannelExec channelExec = (ChannelExec) session.openChannel("exec");
+                channelExec.setCommand(command);
+                InputStream in = channelExec.getInputStream();
+                InputStream err = channelExec.getErrStream(); // For error stream
+                channelExec.connect();
+
+                Thread stdOutThread = new Thread(() -> {
+                    try {
+                        byte[] buffer = new byte[1024];
+                        int read;
+                        while ((read = in.read(buffer)) != -1) {
+                            final String chunk = new String(buffer, 0, read);
+                            runOnUiThread(() -> updateOutput(chunk));
+                        }
+                    } catch (IOException e) {
+                        runOnUiThread(() -> updateOutput("Error: " + e.getMessage()));
+                    }
+                });
+
+                Thread stdErrThread = new Thread(() -> {
+                    try {
+                        byte[] buffer = new byte[1024];
+                        int read;
+                        while ((read = err.read(buffer)) != -1) {
+                            final String chunk = new String(buffer, 0, read);
+                            runOnUiThread(() -> updateOutput(chunk));
+                        }
+                    } catch (IOException e) {
+                        runOnUiThread(() -> updateOutput("Error: " + e.getMessage()));
+                    }
+                });
+
+                stdOutThread.start();
+                stdErrThread.start();
+
+                stdOutThread.join();
+                stdErrThread.join();
+
+                channelExec.disconnect();
+                session.disconnect();
+            } catch (JSchException | IOException | InterruptedException e) {
+                runOnUiThread(() -> updateOutput("Error: " + e.getMessage()));
+            }
         });
     }
 
+
+    private void updateOutput(String chunk) {
+        outputTextView.append(chunk);
+        outputScrollView.post(() -> outputScrollView.fullScroll(View.FOCUS_DOWN));
+    }
+
     private void showHostKeyDialog(String hostKey) {
-        // Inflate the custom dialog layout
         View dialogView = getLayoutInflater().inflate(R.layout.dialog_host_key, null);
 
-        // Find UI elements in the inflated layout
         TextView titleTextView = dialogView.findViewById(R.id.dialog_title);
         TextView messageTextView = dialogView.findViewById(R.id.dialog_message);
         Button acceptButton = dialogView.findViewById(R.id.button_accept);
         Button denyButton = dialogView.findViewById(R.id.button_deny);
+        Button addKeyButton = dialogView.findViewById(R.id.addKeyButton);
 
-        // Set content and behavior for the dialog elements
         titleTextView.setText(R.string.host_key_verification6);
         messageTextView.setText(String.format("%s%s%s", getString(R.string.host_key_fingerprint7), hostKey, getString(R.string.do_you_want_to_accept_it)));
 
-        // Set click listeners for buttons
         acceptButton.setOnClickListener(view -> {
             final Animation myAnim = AnimationUtils.loadAnimation(MainActivity5.this, R.anim.bounce);
             acceptButton.startAnimation(myAnim);
-            // Handle host key acceptance
-            // You can continue with the remote file transfer here
-            alertDialog.dismiss(); // Dismiss the dialog
-            performSSHOperations();
+            synchronized (MainActivity5.this) {
+                MainActivity5.this.notify();
+            }
+            alertDialog.dismiss();
+            connectAndExecuteCommand2();
         });
 
         denyButton.setOnClickListener(view -> {
             final Animation myAnim = AnimationUtils.loadAnimation(MainActivity5.this, R.anim.bounce);
             denyButton.startAnimation(myAnim);
-            // Handle host key denial
-            // Show a message or take appropriate action
-            alertDialog.dismiss(); // Dismiss the dialog
+            synchronized (MainActivity5.this) {
+                MainActivity5.this.notify();
+            }
+            alertDialog.dismiss();
             runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "Host key denied."));
         });
 
-        // Create and show the AlertDialog with the custom layout
+        addKeyButton.setOnClickListener(view -> {
+            final Animation myAnim = AnimationUtils.loadAnimation(MainActivity5.this, R.anim.bounce);
+            addKeyButton.startAnimation(myAnim);
+            synchronized (MainActivity5.this) {
+                MainActivity5.this.notify();
+            }
+            alertDialog.dismiss();
+            performSSHOperations();
+            connectAndExecuteCommand2();
+
+        });
         AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity5.this);
         builder.setView(dialogView);
         alertDialog = builder.create();
@@ -415,7 +462,7 @@ public class MainActivity5 extends Activity {
                 if (!Files.exists(path)) {
                     KeyPair keyPair = KeyPair.genKeyPair(jsch, KeyPair.RSA);
                     keyPair.writePrivateKey(privateKeyPathAndroid);
-                    Log.d("SSH", "Generating private key... : " + privateKeyPathAndroid);
+                    Log.i("SSH", "Generating private key... : " + privateKeyPathAndroid);
                     Files.setPosixFilePermissions(path, PosixFilePermissions.fromString("rw-------"));
 
                     byte[] publicKeyBytes = keyPair.getPublicKeyBlob();
@@ -428,33 +475,31 @@ public class MainActivity5 extends Activity {
                         runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "IOException: " + e.getMessage()));
                     }
                 }
-                Session session = jsch.getSession(username, serverAddress, 22);
+
+                Session session = jsch.getSession(username, serverAddress, Integer.parseInt(port));
                 session.setConfig("StrictHostKeyChecking", "no");
                 session.setConfig("PreferredAuthentications", "publickey,password");
                 jsch.addIdentity(privateKeyPathAndroid);
                 session.setPassword(password);
-
                 try {
                     session.connect();
-                    Log.d("SSH", "Authentication successful");
                     uploadPublicKey(session, publicKeyPathAndroid, publicKeyPathServer);
-
                 } catch (JSchException keyAuthException) {
                     Log.w("SSH4Android", keyAuthException.getMessage(), keyAuthException);
+                    runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "JSchException: " + keyAuthException.getMessage()));
                 }
+                connectAndExecuteCommand2();
 
                 if (session.isConnected()) {
                     session.disconnect();
                 }
-
             } catch (JSchException | IOException e) {
                 Log.w("SSH4Android", e.getMessage(), e);
+                runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "JSchException | IOException: " + e.getMessage()));
             }
-            connectAndExecuteCommand2();
         });
     }
 
-    // Upload public key to the server's authorized_keys file
     private void uploadPublicKey(Session session, String publicKeyPathAndroid, String publicKeyPathServer)
             throws JSchException, IOException {
 
@@ -463,30 +508,21 @@ public class MainActivity5 extends Activity {
 
         final Path path = Paths.get(publicKeyPathAndroid);
         try (InputStream publicKeyStream = Files.newInputStream(path)) {
-
-            Log.d("SSH", "publicKeyPathAndroid(upload): " + publicKeyPathAndroid);
-            Log.d("SSH", "publicKeyPathServer(upload): " + publicKeyPathServer);
-
-            // Read the existing authorized_keys content
             String existingKeysContent = readExistingKeys(session, publicKeyPathServer);
 
-            // Check if the key already exists
             if (publicKeyStream != null && !existingKeysContent.contains(new String(Files.readAllBytes(path)))) {
-                // Append the new key with a newline character at the beginning
                 String newKeyContent = "\n" + new String(Files.readAllBytes(path));
                 String updatedKeysContent = existingKeysContent + newKeyContent;
 
-                // Write the updated content back to the authorized_keys file
                 try (InputStream updatedKeysStream = new ByteArrayInputStream(updatedKeysContent.getBytes())) {
                     channelSftp.put(updatedKeysStream, publicKeyPathServer);
-                    runOnUiThread(() -> GreenCustomToast.showCustomToast(getApplicationContext(), "Key added to accepted_keys"));
-
+                    runOnUiThread(() -> GreenCustomToast.showCustomToast(getApplicationContext(), "Key added to authorized_keys"));
                 } catch (IOException | SftpException e) {
                     Log.w("SSH4Android", e.getMessage(), e);
                     runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "IOException | SftpException: " + e.getMessage()));
                 }
             } else {
-                Log.d("SSH", "Key already exists in authorized_keys file. Skipping upload.");
+                runOnUiThread(() -> GreenCustomToast.showCustomToast(getApplicationContext(), "Key already exists in authorized_keys"));
             }
         } catch (IOException e) {
             Log.w("SSH4Android", e.getMessage(), e);
@@ -495,6 +531,7 @@ public class MainActivity5 extends Activity {
             channelSftp.disconnect();
         }
     }
+
 
     // Read existing keys from the authorized_keys file
     private String readExistingKeys(Session session, String publicKeyPathServer) throws JSchException, IOException {
@@ -511,8 +548,9 @@ public class MainActivity5 extends Activity {
         }
     }
 
+
     // Replace InputStream#readAllBytes with the alternative method
-    private static byte[] readAllBytes(InputStream inputStream) throws IOException {
+    private byte[] readAllBytes(InputStream inputStream) throws IOException {
         ByteArrayOutputStream buffer = new ByteArrayOutputStream();
         int nRead;
         byte[] data = new byte[16384];
@@ -539,13 +577,12 @@ public class MainActivity5 extends Activity {
 
             MainActivity5 activity = activityReference.get();
             if (activity == null || activity.isFinishing()) {
-                // The activity is no longer available, exit the task
                 return;
             }
 
             try {
                 JSch jsch = new JSch();
-                Session session = jsch.getSession(activity.username, activity.serverAddress, 22);
+                Session session = jsch.getSession(activity.username, activity.serverAddress, Integer.parseInt(port));
                 session.setConfig("StrictHostKeyChecking", "no");
                 session.setConfig("PreferredAuthentications", "publickey,password");
                 jsch.addIdentity(privateKeyPathAndroid);
@@ -566,9 +603,11 @@ public class MainActivity5 extends Activity {
                         if (i < 0) break;
                         output.append(new String(tmp, 0, i));
 
-                        // Update the UI dynamically as output is received
                         runOnUiThread(() -> {
                             if (output.length() > 0) {
+                                ScrollView outputScrollView = activity.outputScrollView;
+                                TextView outputTextView = activity.outputTextView;
+                                outputScrollView.setVisibility(View.VISIBLE);
                                 outputTextView.setVisibility(View.VISIBLE);
                                 outputTextView.setText(output.toString());
                             }
@@ -579,9 +618,6 @@ public class MainActivity5 extends Activity {
                         if (in.available() > 0) continue;
                         break;
                     }
-
-                    // Introduce a delay to avoid excessive UI updates
-                    sleep(500); // You can adjust the delay as needed
                 }
 
                 channelExec.disconnect();
@@ -596,30 +632,24 @@ public class MainActivity5 extends Activity {
                         final Animation myAnim = AnimationUtils.loadAnimation(MainActivity5.this, R.anim.bounce);
                         button6.startAnimation(myAnim);
 
-                        // Clear previous output and prepare for a new command
                         output.setLength(0);
-                        // Clear previous output in the UI
                         activity.runOnUiThread(() -> {
                             activity.outputTextView.setText("");
                             outputTextView.setText("");
                             activity.outputTextView.setVisibility(View.GONE);
 
-                            // Optionally, reset other variables related to the previous command
                             command = "";
                             enterButton.setVisibility(View.VISIBLE);
 
-                            // Show inputAutoComplete and request focus
                             inputAutoComplete.setVisibility(View.VISIBLE);
                             inputAutoComplete.requestFocus();
 
                             runOnUiThread(() -> textView2.setVisibility(View.GONE));
-                            // Show the keyboard
                             InputMethodManager imm = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
                             if (imm != null) {
                                 imm.showSoftInput(inputAutoComplete, InputMethodManager.SHOW_IMPLICIT);
                             }
 
-                            // Dismiss the dialog if it's showing
                             if (alertDialog != null && alertDialog.isShowing()) {
                                 alertDialog.dismiss();
                             }
@@ -628,11 +658,10 @@ public class MainActivity5 extends Activity {
                 });
 
                 success = true;
-            } catch (JSchException | IOException | InterruptedException e) {
+            } catch (JSchException | IOException e) {
                 Log.w("SSH4Android", e.getMessage(), e);
                 runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "Exception: " + e.getMessage()));
             }
-
 
             boolean finalSuccess = success;
             runOnUiThread(() -> {
