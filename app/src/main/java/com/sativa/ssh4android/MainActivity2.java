@@ -477,7 +477,7 @@ public class MainActivity2 extends Activity {
             });
         });
     }
-    
+
 private void showHostKeyDialog(String hostKey) {
         // Inflate the custom dialog layout
         View dialogView = getLayoutInflater().inflate(R.layout.dialog_host_key, null);
