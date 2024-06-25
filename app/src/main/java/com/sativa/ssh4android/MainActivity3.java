@@ -312,7 +312,6 @@ public class MainActivity3 extends Activity {
         return passwordsMap.get(serverAddress + "_" + username);
     }
 
-
     private void connectAndExecuteCommand() {
 
         Executor executor = Executors.newSingleThreadExecutor();
@@ -428,7 +427,7 @@ public class MainActivity3 extends Activity {
                         writer.write("ssh-rsa " + publicKeyString + " " + username);
                     } catch (IOException e) {
                         Log.w("SSH4Android", e.getMessage(), e);
-                        runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "IOException: " + e.getMessage()));
+                        runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "IOException:\n" + e.getMessage()));
                     }
                 }
 
@@ -442,7 +441,7 @@ public class MainActivity3 extends Activity {
                     uploadPublicKey(session, publicKeyPathAndroid, publicKeyPathServer);
                 } catch (JSchException keyAuthException) {
                     Log.w("SSH4Android", keyAuthException.getMessage(), keyAuthException);
-                    runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "JSchException: " + keyAuthException.getMessage()));
+                    runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "JSchException:\n" + keyAuthException.getMessage()));
                 }
                 openFilePicker();
 
@@ -451,7 +450,7 @@ public class MainActivity3 extends Activity {
                 }
             } catch (JSchException | IOException e) {
                 Log.w("SSH4Android", e.getMessage(), e);
-                runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "JSchException | IOException: " + e.getMessage()));
+                runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "JSchException | IOException:\n" + e.getMessage()));
             }
         });
     }
@@ -475,19 +474,18 @@ public class MainActivity3 extends Activity {
                     runOnUiThread(() -> GreenCustomToast.showCustomToast(getApplicationContext(), "Key added to authorized_keys"));
                 } catch (IOException | SftpException e) {
                     Log.w("SSH4Android", e.getMessage(), e);
-                    runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "IOException | SftpException: " + e.getMessage()));
+                    runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "IOException | SftpException:\n" + e.getMessage()));
                 }
             } else {
                 runOnUiThread(() -> GreenCustomToast.showCustomToast(getApplicationContext(), "Key already exists in authorized_keys"));
             }
         } catch (IOException e) {
             Log.w("SSH4Android", e.getMessage(), e);
-            runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "IOException: " + e.getMessage()));
+            runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "IOException:\n" + e.getMessage()));
         } finally {
             channelSftp.disconnect();
         }
     }
-
 
     // Read existing keys from the authorized_keys file
     private String readExistingKeys(Session session, String publicKeyPathServer) throws JSchException, IOException {
@@ -503,7 +501,6 @@ public class MainActivity3 extends Activity {
             channelSftp.disconnect();
         }
     }
-
 
     // Replace InputStream#readAllBytes with the alternative method
     private byte[] readAllBytes(InputStream inputStream) throws IOException {
@@ -673,13 +670,14 @@ public class MainActivity3 extends Activity {
     // Add this method to show the file overwrite confirmation dialog using the custom alert dialog design
     private void showFileOverwriteConfirmationDialog(String localFilePath, ChannelSftp sftpChannel, Session transferSession, SftpProgressMonitor progressMonitor) {
         // Inflate the custom dialog layout
-        View dialogView = getLayoutInflater().inflate(R.layout.dialog_host_key, null);
+        View dialogView = getLayoutInflater().inflate(R.layout.choose3, null);
 
         // Find UI elements in the inflated layout
         TextView titleTextView = dialogView.findViewById(R.id.dialog_title);
         TextView messageTextView = dialogView.findViewById(R.id.dialog_message);
-        Button acceptButton = dialogView.findViewById(R.id.button_accept);
-        Button denyButton = dialogView.findViewById(R.id.button_deny);
+        Button acceptButton = dialogView.findViewById(R.id.overwriteButton);
+        Button denyButton = dialogView.findViewById(R.id.cancelButton2);
+        Button renameButton = dialogView.findViewById(R.id.renameButton);
 
         // Set content and behavior for the dialog elements
         titleTextView.setText(R.string.file_exists);
@@ -712,11 +710,55 @@ public class MainActivity3 extends Activity {
             showChooseDialog(); // Show the choose dialog again
         });
 
-        // Create and show the AlertDialog with the custom layout
+        renameButton.setText(R.string.rename);
+        renameButton.setOnClickListener(view -> {
+            alertDialog.dismiss();
+            ExecutorService executorService = Executors.newSingleThreadExecutor();
+            executorService.submit(() -> {
+                try {
+                    String newRemoteFileDestination = generateNewFileName(sftpChannel, remoteFileDestination);
+                    sftpChannel.put(localFilePath, newRemoteFileDestination, progressMonitor);
+                } catch (SftpException e) {
+                    Log.w("SSH4Android", e.getMessage(), e);
+                    runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "SftpException: " + e.getMessage()));
+                }
+                sftpChannel.exit();
+                transferSession.disconnect();
+                runOnUiThread(() -> progressBar.setVisibility(View.GONE));
+                showChooseDialog();
+            });
+        });
+
         androidx.appcompat.app.AlertDialog.Builder builder = new androidx.appcompat.app.AlertDialog.Builder(MainActivity3.this);
         builder.setView(dialogView);
         runOnUiThread(() -> alertDialog = builder.create());
         runOnUiThread(() -> alertDialog.show());
+    }
+
+    private String generateNewFileName(ChannelSftp sftpChannel, String remoteFileDestination) throws SftpException {
+        String newFileName = remoteFileDestination;
+        int count = 1;
+        while (true) {
+            try {
+                sftpChannel.stat(newFileName);
+                String extension;
+                int dotIndex = remoteFileDestination.lastIndexOf(".");
+                if (dotIndex != -1) {
+                    extension = remoteFileDestination.substring(dotIndex);
+                    newFileName = remoteFileDestination.substring(0, dotIndex) + "(" + count + ")" + extension;
+                } else {
+                    newFileName = remoteFileDestination + "(" + count + ")";
+                }
+                count++;
+            } catch (SftpException e) {
+                if (e.id == ChannelSftp.SSH_FX_NO_SUCH_FILE) {
+                    break;
+                } else {
+                    throw e;
+                }
+            }
+        }
+        return newFileName;
     }
 
     // Define showChooseDialog() outside of any other methods

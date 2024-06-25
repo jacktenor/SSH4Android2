@@ -542,7 +542,7 @@ public class MainActivity2 extends Activity {
                         writer.write("ssh-rsa " + publicKeyString + " " + username);
                     } catch (IOException e) {
                         Log.w("SSH4Android", e.getMessage(), e);
-                        runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "IOException: " + e.getMessage()));
+                        runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "IOException:\n" + e.getMessage()));
                     }
                 }
 
@@ -556,7 +556,7 @@ public class MainActivity2 extends Activity {
                     uploadPublicKey(session, publicKeyPathAndroid, publicKeyPathServer);
                 } catch (JSchException keyAuthException) {
                     Log.w("SSH4Android", keyAuthException.getMessage(), keyAuthException);
-                    runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "JSchException: " + keyAuthException.getMessage()));
+                    runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "JSchException:\n" + keyAuthException.getMessage()));
                 }
                 connectAndExecuteCommand2();
 
@@ -565,7 +565,7 @@ public class MainActivity2 extends Activity {
                 }
             } catch (JSchException | IOException e) {
                 Log.w("SSH4Android", e.getMessage(), e);
-                runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "JSchException | IOException: " + e.getMessage()));
+                runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "JSchException | IOException:\n" + e.getMessage()));
             }
         });
     }
@@ -589,19 +589,18 @@ public class MainActivity2 extends Activity {
                     runOnUiThread(() -> GreenCustomToast.showCustomToast(getApplicationContext(), "Key added to authorized_keys"));
                 } catch (IOException | SftpException e) {
                     Log.w("SSH4Android", e.getMessage(), e);
-                    runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "IOException | SftpException: " + e.getMessage()));
+                    runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "IOException | SftpException:\n" + e.getMessage()));
                 }
             } else {
                 runOnUiThread(() -> GreenCustomToast.showCustomToast(getApplicationContext(), "Key already exists in authorized_keys"));
             }
         } catch (IOException e) {
             Log.w("SSH4Android", e.getMessage(), e);
-            runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "IOException: " + e.getMessage()));
+            runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "IOException:\n" + e.getMessage()));
         } finally {
             channelSftp.disconnect();
         }
     }
-
 
     // Read existing keys from the authorized_keys file
     private String readExistingKeys(Session session, String publicKeyPathServer) throws JSchException, IOException {
@@ -617,7 +616,6 @@ public class MainActivity2 extends Activity {
             channelSftp.disconnect();
         }
     }
-
 
     // Replace InputStream#readAllBytes with the alternative method
     private byte[] readAllBytes(InputStream inputStream) throws IOException {
@@ -686,7 +684,7 @@ public class MainActivity2 extends Activity {
                 success = true;
             } catch (JSchException | IOException e) {
                 Log.w("SSH4Android", e.getMessage(), e);
-                runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "Exception: " + e.getMessage()));
+                runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "JSchException | IOException:\n" + e.getMessage()));
             }
 
             boolean finalSuccess = success;
@@ -827,7 +825,7 @@ public class MainActivity2 extends Activity {
                 // You can continue with renaming logic here
                 alertDialog.dismiss(); // Dismiss the dialog
                 // Add your rename logic here
-                renameFile(remoteFilePath, localFilePath);
+                renameFile2(remoteFilePath, localFilePath);
             });
 
             // Set click listeners for buttons
@@ -978,7 +976,7 @@ public class MainActivity2 extends Activity {
                         success = true;
                     } catch (IOException | SftpException e) {
                         Log.w("SSH4Android", e.getMessage(), e);
-                        runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "Directory download error: " + e.getMessage()));
+                        runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "Directory download error:\n" + e.getMessage()));
                     }
                 }
 
@@ -1008,7 +1006,7 @@ public class MainActivity2 extends Activity {
                 });
             } catch (JSchException | SftpException e) {
                 Log.w("SSH4Android", e.getMessage(), e);
-                runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "JSchException | SftpException: " + e.getMessage()));
+                runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "JSchException | SftpException:\n" + e.getMessage()));
             }
         });
     }
@@ -1098,7 +1096,7 @@ public class MainActivity2 extends Activity {
                             });
                         } catch (IOException e) {
                             Log.w("SSH4Android", "Error downloading directory: " + e.getMessage());
-                            runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "Error downloading file."));
+                            runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "Error downloading file:\n" + e.getMessage()));
                             break; // Exit the loop if there's an error
                         }
                     } else {
@@ -1188,6 +1186,47 @@ public class MainActivity2 extends Activity {
         }
         // Proceed with downloading or any other action
         startDownload(remoteFilePath, renamedFilePath);
+    }
+
+    private void renameFile2(String remoteFilePath, String localFilePath) {
+        // Extract the filename and file extension from the localFilePath
+        File originalFile = new File(localFilePath);
+
+        String filename = originalFile.getName();
+        String extension = ".zip";
+        int dotIndex = filename.lastIndexOf('.');
+        if (dotIndex > 0 && dotIndex < filename.length() - 1) {
+            extension = filename.substring(dotIndex);
+            filename = filename.substring(0, dotIndex);
+        }
+
+        // Generate a unique filename by appending a number in parentheses
+        int counter = 1;
+        String renamedFilePath;
+        do {
+            renamedFilePath = localFilePath.replace(filename + extension, filename + "(" + counter + ")" + extension);
+            counter++;
+        } while (new File(renamedFilePath).exists());
+
+        File renamedFile = new File(renamedFilePath);
+
+        // Copy the contents of the original file to the new file
+        try (InputStream inputStream = new FileInputStream(originalFile);
+             OutputStream outputStream = new FileOutputStream(renamedFile)) {
+            byte[] buffer = new byte[1024];
+            int bytesRead;
+            while ((bytesRead = inputStream.read(buffer)) != -1) {
+                outputStream.write(buffer, 0, bytesRead);
+            }
+
+        } catch (IOException e) {
+            Log.w("SSH4Android", e.getMessage(), e);
+            // Handle any exceptions during file copy
+            runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "Error copying file contents."));
+            return;
+        }
+        // Proceed with downloading or any other action
+        downloadCompressedDirectory(remoteFilePath, renamedFilePath);
     }
 
     private void updateFileListView(List<String> newDirectoryContents, boolean showHiddenFiles){
@@ -1297,7 +1336,7 @@ public class MainActivity2 extends Activity {
                     success = true;
                 } catch (JSchException | SftpException e) {
                     Log.w("SSH4Android", e.getMessage(), e);
-                    runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "Error during directory compression/download: " + e.getMessage()));
+                    runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "Error during directory compression/download:\n" + e.getMessage()));
                 }
 
                 boolean finalSuccess = success;
@@ -1305,7 +1344,7 @@ public class MainActivity2 extends Activity {
                     MainActivity2 activity = activityReference.get();
                     if (activity != null && !activity.isFinishing()) {
                         if (finalSuccess) {
-                            GreenCustomToast.showCustomToast(activity.getApplicationContext(), "Directory downloaded: " + remotePath);
+                            GreenCustomToast.showCustomToast(activity.getApplicationContext(), "Directory downloaded:\n" + remotePath);
                         } else {
                             CustomToast.showCustomToast(activity.getApplicationContext(), "Directory download failed.");
                         }
@@ -1316,8 +1355,6 @@ public class MainActivity2 extends Activity {
             });
         }
     }
-
-
 
     private void compressDirectory(String remotePath, String compressedFilePath, ChannelSftp channelSftp) {
         try (ZipOutputStream zipOutputStream = new ZipOutputStream(new FileOutputStream(compressedFilePath))) {
@@ -1333,7 +1370,7 @@ public class MainActivity2 extends Activity {
             compressDirectoryRecursive(remotePath, "", zipOutputStream, channelSftp, maxProgress);
         } catch (IOException | SftpException e) {
             Log.w("SSH4Android", e.getMessage(), e);
-            runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "Error during directory compression: " + e.getMessage()));
+            runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "Error during directory compression:\n" + e.getMessage()));
         }
     }
 
@@ -1368,7 +1405,7 @@ public class MainActivity2 extends Activity {
                     zipOutputStream.closeEntry();
                 } catch (IOException | IllegalArgumentException e) {
                     Log.w("SSH4Android", e.getMessage(), e);
-                    runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), e.getMessage()));
+                    runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(),"Error during file compression:\n" + e.getMessage()));
                 }
             }
 
@@ -1422,7 +1459,7 @@ public class MainActivity2 extends Activity {
                 session.disconnect();
             } catch (JSchException | SftpException e) {
                 Log.w("SSH4Android", e.getMessage(), e);
-                runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "Error during directory listing: " + e.getMessage()));
+                runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "Error during directory listing:\n" + e.getMessage()));
             }
 
             runOnUiThread(() -> {

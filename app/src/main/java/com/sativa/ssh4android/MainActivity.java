@@ -29,7 +29,6 @@ public class MainActivity extends Activity {
         button4.setBackgroundColor(Color.TRANSPARENT);
         button5.setBackgroundColor(Color.TRANSPARENT);
 
-
         button.setOnClickListener(view -> {
             Intent i = new Intent(MainActivity.this, MainActivity2.class);
             final Animation myAnim = AnimationUtils.loadAnimation(this, R.anim.bounce);
@@ -74,7 +73,6 @@ public class MainActivity extends Activity {
             }
         });
     }
-
 
     public void clearInputHistory() {
 

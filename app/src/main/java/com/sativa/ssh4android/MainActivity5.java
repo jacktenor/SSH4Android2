@@ -20,35 +20,23 @@ import android.widget.CheckBox;
 import android.widget.ScrollView;
 import android.widget.TextView;
 import androidx.annotation.NonNull;
-import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 import com.jcraft.jsch.ChannelExec;
-import com.jcraft.jsch.ChannelSftp;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
-import com.jcraft.jsch.KeyPair;
 import com.jcraft.jsch.Session;
-import com.jcraft.jsch.SftpException;
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.FileWriter;
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
-import java.lang.ref.WeakReference;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.attribute.PosixFilePermissions;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
-import java.util.Base64;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
@@ -60,6 +48,7 @@ public class MainActivity5 extends AppCompatActivity {
     private Button enterButton;
     private Button button6;
     private Button button;
+    private Button cancelButton; // New cancel button
     private TextView outputTextView;
     private TextView textView2;
     private CheckBox savePasswordCheckbox;
@@ -72,9 +61,12 @@ public class MainActivity5 extends AppCompatActivity {
     private Set<String> inputHistory;
     private int currentQuestionIndex;
     private List<String> questions;
-    private AlertDialog alertDialog;
     private static final String INPUT_HISTORY_KEY = "inputHistory";
     private static final int REQUEST_WRITE_EXTERNAL_STORAGE = 1;
+    private Thread stdOutThread;
+    private Thread stdErrThread;
+    private ChannelExec channelExec;
+    private final AtomicBoolean isCancelled = new AtomicBoolean(false);
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -83,6 +75,7 @@ public class MainActivity5 extends AppCompatActivity {
 
         button6 = findViewById(R.id.button6);
         button = findViewById(R.id.button);
+        cancelButton = findViewById(R.id.cancelButton); // Initialize the cancel button
         inputAutoComplete = findViewById(R.id.inputAutoComplete);
         enterButton = findViewById(R.id.enterButton);
         savePasswordCheckbox = findViewById(R.id.savePasswordCheckbox);
@@ -104,6 +97,7 @@ public class MainActivity5 extends AppCompatActivity {
         button.setOnClickListener(view -> {
             final Animation myAnim = AnimationUtils.loadAnimation(this, R.anim.bounce);
             button.startAnimation(myAnim);
+            cancelCommand();
             Intent i = new Intent(MainActivity5.this, MainActivity.class);
             startActivity(i);
         });
@@ -142,7 +136,7 @@ public class MainActivity5 extends AppCompatActivity {
             try {
                 handleInput();
             } catch (IOException e) {
-                runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "IOException: " + e.getMessage()));
+                runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "IOException:\n" + e.getMessage()));
             }
         });
         final Animation myAnim = AnimationUtils.loadAnimation(this, R.anim.bounce);
@@ -195,7 +189,6 @@ public class MainActivity5 extends AppCompatActivity {
         } else {
             inputAutoComplete.setText("");
         }
-
         currentQuestionIndex++;
 
         // Save the new password for the current server address and username
@@ -278,7 +271,7 @@ public class MainActivity5 extends AppCompatActivity {
             inputAutoComplete.setVisibility(View.GONE);
             enterButton.setVisibility(View.GONE);
 
-            connectAndExecuteCommand();
+            connectAndExecuteCommand2();
         }
     }
 
@@ -315,65 +308,68 @@ public class MainActivity5 extends AppCompatActivity {
         return passwordsMap.get(serverAddress + "_" + username);
     }
 
-    private void connectAndExecuteCommand() {
-
+    private void connectAndExecuteCommand2() {
         Executor executor = Executors.newSingleThreadExecutor();
+        outputScrollView.setVisibility(View.VISIBLE);
+        outputTextView.setVisibility(View.VISIBLE);
+        outputTextView.setText("");
+        cancelButton.setVisibility(View.VISIBLE); // Show the cancel button
+        button.setVisibility(View.VISIBLE);
+        textView2.setVisibility(View.VISIBLE);
+
+        // Set the cancel button click listener before starting the threads
+        cancelButton.setOnClickListener(view -> {
+            final Animation myAnim = AnimationUtils.loadAnimation(MainActivity5.this, R.anim.bounce);
+            cancelButton.startAnimation(myAnim);
+            cancelCommand();
+        });
 
         executor.execute(() -> {
-            Session session = null;
-            String hostKey = null;
-
+            Session session;
             try {
                 JSch jsch = new JSch();
                 session = jsch.getSession(username, serverAddress, Integer.parseInt(port));
-                session.setConfig("StrictHostKeyChecking", "yes");
+                session.setConfig("StrictHostKeyChecking", "no"); // Disabled host key checking for now
                 session.setConfig("PreferredAuthentications", "publickey,password");
                 session.setPassword(password);
                 session.connect();
-            } catch (JSchException ex) {
-                if (session != null) {
-                    hostKey = session.getHostKey().getFingerPrint(null);
-                } else {
-                    runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "Host key error."));
-                }
-            }
-            String finalHostKey = hostKey;
-            runOnUiThread(() -> showHostKeyDialog(finalHostKey));
 
-            try {
-                synchronized (Objects.requireNonNull(session)) {
-                    session.wait();
-                }
-
-                ChannelExec channelExec = (ChannelExec) session.openChannel("exec");
+                channelExec = (ChannelExec) session.openChannel("exec");
                 channelExec.setCommand(command);
                 InputStream in = channelExec.getInputStream();
                 InputStream err = channelExec.getErrStream(); // For error stream
                 channelExec.connect();
 
-                Thread stdOutThread = new Thread(() -> {
-                    try {
-                        byte[] buffer = new byte[1024];
-                        int read;
-                        while ((read = in.read(buffer)) != -1) {
-                            final String chunk = new String(buffer, 0, read);
-                            runOnUiThread(() -> updateOutput(chunk));
+                isCancelled.set(false); // Reset cancellation flag
+
+                stdOutThread = new Thread(() -> {
+                    try (BufferedReader reader = new BufferedReader(new InputStreamReader(in))) {
+                        String line;
+                        while ((line = reader.readLine()) != null && !isCancelled.get()) {
+                            final String outputLine = line + "\n";
+                            runOnUiThread(() -> updateOutput(outputLine));
                         }
                     } catch (IOException e) {
-                        runOnUiThread(() -> updateOutput("Error: " + e.getMessage()));
+                        if (!isCancelled.get()) {
+                            runOnUiThread(() -> updateOutput("Error: " + e.getMessage()));
+                        }
+                        Log.e("SSH", "Error reading stdout: " + e.getMessage());
                     }
                 });
 
-                Thread stdErrThread = new Thread(() -> {
-                    try {
-                        byte[] buffer = new byte[1024];
-                        int read;
-                        while ((read = err.read(buffer)) != -1) {
-                            final String chunk = new String(buffer, 0, read);
-                            runOnUiThread(() -> updateOutput(chunk));
+                stdErrThread = new Thread(() -> {
+                    try (BufferedReader reader = new BufferedReader(new InputStreamReader(err))) {
+                        String line;
+                        while ((line = reader.readLine()) != null && !isCancelled.get()) {
+                            final String errorLine = line + "\n";
+                            runOnUiThread(() -> updateOutput(errorLine));
+                            Log.i("SSH", "Error: " + errorLine);
                         }
                     } catch (IOException e) {
-                        runOnUiThread(() -> updateOutput("Error: " + e.getMessage()));
+                        if (!isCancelled.get()) {
+                            runOnUiThread(() -> updateOutput("Error: " + e.getMessage()));
+                        }
+                        Log.e("SSH", "Error reading stderr: " + e.getMessage());
                     }
                 });
 
@@ -385,293 +381,51 @@ public class MainActivity5 extends AppCompatActivity {
 
                 channelExec.disconnect();
                 session.disconnect();
+
+                runOnUiThread(this::resetUI);
+
             } catch (JSchException | IOException | InterruptedException e) {
-                runOnUiThread(() -> updateOutput("Error: " + e.getMessage()));
+                if (!isCancelled.get()) {
+                    runOnUiThread(() -> updateOutput("Error: " + e.getMessage()));
+                }
             }
         });
     }
 
+    private void resetUI() {
+        cancelButton.setVisibility(View.GONE); // Hide the cancel button
+        outputScrollView.setVisibility(View.GONE);
+        outputTextView.setVisibility(View.GONE);
+
+        command = "";
+        enterButton.setVisibility(View.VISIBLE);
+
+        inputAutoComplete.setVisibility(View.VISIBLE);
+        inputAutoComplete.requestFocus();
+
+        runOnUiThread(() -> textView2.setVisibility(View.GONE));
+        InputMethodManager imm = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+        if (imm != null) {
+            imm.showSoftInput(inputAutoComplete, InputMethodManager.SHOW_IMPLICIT);
+        }
+    }
+
+    private void cancelCommand() {
+        isCancelled.set(true);
+        if (stdOutThread != null && stdOutThread.isAlive()) {
+            stdOutThread.interrupt();
+        }
+        if (stdErrThread != null && stdErrThread.isAlive()) {
+            stdErrThread.interrupt();
+        }
+        if (channelExec != null && channelExec.isConnected()) {
+            channelExec.disconnect();
+        }
+        resetUI();
+    }
 
     private void updateOutput(String chunk) {
         outputTextView.append(chunk);
         outputScrollView.post(() -> outputScrollView.fullScroll(View.FOCUS_DOWN));
-    }
-
-    private void showHostKeyDialog(String hostKey) {
-        View dialogView = getLayoutInflater().inflate(R.layout.dialog_host_key, null);
-
-        TextView titleTextView = dialogView.findViewById(R.id.dialog_title);
-        TextView messageTextView = dialogView.findViewById(R.id.dialog_message);
-        Button acceptButton = dialogView.findViewById(R.id.button_accept);
-        Button denyButton = dialogView.findViewById(R.id.button_deny);
-        Button addKeyButton = dialogView.findViewById(R.id.addKeyButton);
-
-        titleTextView.setText(R.string.host_key_verification6);
-        messageTextView.setText(String.format("%s%s%s", getString(R.string.host_key_fingerprint7), hostKey, getString(R.string.do_you_want_to_accept_it)));
-
-        acceptButton.setOnClickListener(view -> {
-            final Animation myAnim = AnimationUtils.loadAnimation(MainActivity5.this, R.anim.bounce);
-            acceptButton.startAnimation(myAnim);
-            synchronized (MainActivity5.this) {
-                MainActivity5.this.notify();
-            }
-            alertDialog.dismiss();
-            connectAndExecuteCommand2();
-        });
-
-        denyButton.setOnClickListener(view -> {
-            final Animation myAnim = AnimationUtils.loadAnimation(MainActivity5.this, R.anim.bounce);
-            denyButton.startAnimation(myAnim);
-            synchronized (MainActivity5.this) {
-                MainActivity5.this.notify();
-            }
-            alertDialog.dismiss();
-            runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "Host key denied."));
-        });
-
-        addKeyButton.setOnClickListener(view -> {
-            final Animation myAnim = AnimationUtils.loadAnimation(MainActivity5.this, R.anim.bounce);
-            addKeyButton.startAnimation(myAnim);
-            synchronized (MainActivity5.this) {
-                MainActivity5.this.notify();
-            }
-            alertDialog.dismiss();
-            performSSHOperations();
-            connectAndExecuteCommand2();
-
-        });
-        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity5.this);
-        builder.setView(dialogView);
-        alertDialog = builder.create();
-        alertDialog.show();
-    }
-
-    private void performSSHOperations() {
-        Executor executor = Executors.newSingleThreadExecutor();
-
-        executor.execute(() -> {
-            String keysDirectory = getApplicationContext().getFilesDir().getPath();
-            String privateKeyPathAndroid = keysDirectory + "/ssh4android";
-            String publicKeyPathAndroid = keysDirectory + "/ssh4android.pub";
-            String publicKeyPathServer = "/home/" + username + "/.ssh/authorized_keys";
-
-            try {
-                JSch jsch = new JSch();
-
-                final Path path = Paths.get(privateKeyPathAndroid);
-                if (!Files.exists(path)) {
-                    KeyPair keyPair = KeyPair.genKeyPair(jsch, KeyPair.RSA);
-                    keyPair.writePrivateKey(privateKeyPathAndroid);
-                    Log.i("SSH", "Generating private key... : " + privateKeyPathAndroid);
-                    Files.setPosixFilePermissions(path, PosixFilePermissions.fromString("rw-------"));
-
-                    byte[] publicKeyBytes = keyPair.getPublicKeyBlob();
-                    String publicKeyString = Base64.getEncoder().encodeToString(publicKeyBytes);
-
-                    try (FileWriter writer = new FileWriter(publicKeyPathAndroid)) {
-                        writer.write("ssh-rsa " + publicKeyString + " " + username);
-                    } catch (IOException e) {
-                        Log.w("SSH4Android", e.getMessage(), e);
-                        runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "IOException: " + e.getMessage()));
-                    }
-                }
-
-                Session session = jsch.getSession(username, serverAddress, Integer.parseInt(port));
-                session.setConfig("StrictHostKeyChecking", "no");
-                session.setConfig("PreferredAuthentications", "publickey,password");
-                jsch.addIdentity(privateKeyPathAndroid);
-                session.setPassword(password);
-                try {
-                    session.connect();
-                    uploadPublicKey(session, publicKeyPathAndroid, publicKeyPathServer);
-                } catch (JSchException keyAuthException) {
-                    Log.w("SSH4Android", keyAuthException.getMessage(), keyAuthException);
-                    runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "JSchException: " + keyAuthException.getMessage()));
-                }
-                connectAndExecuteCommand2();
-
-                if (session.isConnected()) {
-                    session.disconnect();
-                }
-            } catch (JSchException | IOException e) {
-                Log.w("SSH4Android", e.getMessage(), e);
-                runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "JSchException | IOException: " + e.getMessage()));
-            }
-        });
-    }
-
-    private void uploadPublicKey(Session session, String publicKeyPathAndroid, String publicKeyPathServer)
-            throws JSchException, IOException {
-
-        ChannelSftp channelSftp = (ChannelSftp) session.openChannel("sftp");
-        channelSftp.connect();
-
-        final Path path = Paths.get(publicKeyPathAndroid);
-        try (InputStream publicKeyStream = Files.newInputStream(path)) {
-            String existingKeysContent = readExistingKeys(session, publicKeyPathServer);
-
-            if (publicKeyStream != null && !existingKeysContent.contains(new String(Files.readAllBytes(path)))) {
-                String newKeyContent = "\n" + new String(Files.readAllBytes(path));
-                String updatedKeysContent = existingKeysContent + newKeyContent;
-
-                try (InputStream updatedKeysStream = new ByteArrayInputStream(updatedKeysContent.getBytes())) {
-                    channelSftp.put(updatedKeysStream, publicKeyPathServer);
-                    runOnUiThread(() -> GreenCustomToast.showCustomToast(getApplicationContext(), "Key added to authorized_keys"));
-                } catch (IOException | SftpException e) {
-                    Log.w("SSH4Android", e.getMessage(), e);
-                    runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "IOException | SftpException: " + e.getMessage()));
-                }
-            } else {
-                runOnUiThread(() -> GreenCustomToast.showCustomToast(getApplicationContext(), "Key already exists in authorized_keys"));
-            }
-        } catch (IOException e) {
-            Log.w("SSH4Android", e.getMessage(), e);
-            runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "IOException: " + e.getMessage()));
-        } finally {
-            channelSftp.disconnect();
-        }
-    }
-
-
-    // Read existing keys from the authorized_keys file
-    private String readExistingKeys(Session session, String publicKeyPathServer) throws JSchException, IOException {
-        ChannelSftp channelSftp = (ChannelSftp) session.openChannel("sftp");
-        channelSftp.connect();
-
-        try (InputStream existingKeysStream = channelSftp.get(publicKeyPathServer)) {
-            return new String(readAllBytes(existingKeysStream));
-        } catch (SftpException e) {
-            // Handle the case where the authorized_keys file doesn't exist yet
-            return "";
-        } finally {
-            channelSftp.disconnect();
-        }
-    }
-
-
-    // Replace InputStream#readAllBytes with the alternative method
-    private byte[] readAllBytes(InputStream inputStream) throws IOException {
-        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
-        int nRead;
-        byte[] data = new byte[16384];
-
-        while ((nRead = inputStream.read(data, 0, data.length)) != -1) {
-            buffer.write(data, 0, nRead);
-        }
-
-        buffer.flush();
-        return buffer.toByteArray();
-    }
-
-    private void connectAndExecuteCommand2() {
-        Executor executor = Executors.newSingleThreadExecutor();
-
-        executor.execute(() -> {
-
-            String keysDirectory = getApplicationContext().getFilesDir().getPath();
-            String privateKeyPathAndroid = keysDirectory + "/ssh4android";
-
-            WeakReference<MainActivity5> activityReference = new WeakReference<>(MainActivity5.this);
-            StringBuilder output = new StringBuilder();
-            boolean success = false;
-
-            MainActivity5 activity = activityReference.get();
-            if (activity == null || activity.isFinishing()) {
-                return;
-            }
-
-            try {
-                JSch jsch = new JSch();
-                Session session = jsch.getSession(activity.username, activity.serverAddress, Integer.parseInt(port));
-                session.setConfig("StrictHostKeyChecking", "no");
-                session.setConfig("PreferredAuthentications", "publickey,password");
-                jsch.addIdentity(privateKeyPathAndroid);
-                session.setPassword(activity.password);
-                session.connect();
-
-                ChannelExec channelExec = (ChannelExec) session.openChannel("exec");
-                channelExec.setCommand(activity.command);
-
-                InputStream in = channelExec.getInputStream();
-                channelExec.connect();
-
-                byte[] tmp = new byte[1024];
-
-                while (true) {
-                    while (in.available() > 0) {
-                        int i = in.read(tmp, 0, 1024);
-                        if (i < 0) break;
-                        output.append(new String(tmp, 0, i));
-
-                        runOnUiThread(() -> {
-                            if (output.length() > 0) {
-                                ScrollView outputScrollView = activity.outputScrollView;
-                                TextView outputTextView = activity.outputTextView;
-                                outputScrollView.setVisibility(View.VISIBLE);
-                                outputTextView.setVisibility(View.VISIBLE);
-                                outputTextView.setText(output.toString());
-                            }
-                        });
-                    }
-
-                    if (channelExec.isClosed()) {
-                        if (in.available() > 0) continue;
-                        break;
-                    }
-                }
-
-                channelExec.disconnect();
-                session.disconnect();
-
-                runOnUiThread(() -> {
-                    button6.setVisibility(View.VISIBLE);
-                    button.setVisibility(View.VISIBLE);
-                    textView2.setVisibility(View.VISIBLE);
-
-                    button6.setOnClickListener(view -> {
-                        final Animation myAnim = AnimationUtils.loadAnimation(MainActivity5.this, R.anim.bounce);
-                        button6.startAnimation(myAnim);
-
-                        output.setLength(0);
-                        activity.runOnUiThread(() -> {
-                            activity.outputTextView.setText("");
-                            outputTextView.setText("");
-                            activity.outputTextView.setVisibility(View.GONE);
-
-                            command = "";
-                            enterButton.setVisibility(View.VISIBLE);
-
-                            inputAutoComplete.setVisibility(View.VISIBLE);
-                            inputAutoComplete.requestFocus();
-
-                            runOnUiThread(() -> textView2.setVisibility(View.GONE));
-                            InputMethodManager imm = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
-                            if (imm != null) {
-                                imm.showSoftInput(inputAutoComplete, InputMethodManager.SHOW_IMPLICIT);
-                            }
-
-                            if (alertDialog != null && alertDialog.isShowing()) {
-                                alertDialog.dismiss();
-                            }
-                        });
-                    });
-                });
-
-                success = true;
-            } catch (JSchException | IOException e) {
-                Log.w("SSH4Android", e.getMessage(), e);
-                runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "Exception: " + e.getMessage()));
-            }
-
-            boolean finalSuccess = success;
-            runOnUiThread(() -> {
-                MainActivity5 finalActivity = activityReference.get();
-                if (finalActivity != null && !finalActivity.isFinishing()) {
-                    if (!finalSuccess) {
-                        runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), ""));
-                    }
-                }
-            });
-        });
     }
 }
