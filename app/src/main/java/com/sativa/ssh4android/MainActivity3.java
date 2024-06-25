@@ -79,6 +79,7 @@ public class MainActivity3 extends Activity {
     private Button button;
     private final AtomicInteger lastProgress = new AtomicInteger(-1);
     private String port;
+    private String privateKeyPathAndroid;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -88,6 +89,9 @@ public class MainActivity3 extends Activity {
         getWindow().setBackgroundDrawableResource(R.drawable.panther);
 
         checkAndRequestPermission();
+
+        String keysDirectory = getApplicationContext().getFilesDir().getPath();
+        privateKeyPathAndroid = keysDirectory + "/ssh4android";
 
         inputAutoComplete = findViewById(R.id.inputAutoComplete);
         enterButton = findViewById(R.id.enterButton);
@@ -319,9 +323,14 @@ public class MainActivity3 extends Activity {
         executor.execute(() -> {
             Session session = null;
             String hostKey = null;
-
             try {
                 JSch jsch = new JSch();
+                File privateKeyFile = new File(privateKeyPathAndroid);
+
+                // Check if the private key file exists
+                if (privateKeyFile.exists()) {
+                    jsch.addIdentity(privateKeyPathAndroid);
+                }
                 session = jsch.getSession(username, serverAddress, Integer.parseInt(port));
                 session.setConfig("StrictHostKeyChecking", "yes");
                 session.setConfig("PreferredAuthentications", "publickey,password");
@@ -430,11 +439,15 @@ public class MainActivity3 extends Activity {
                         runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "IOException:\n" + e.getMessage()));
                     }
                 }
+                File privateKeyFile = new File(privateKeyPathAndroid);
 
+                // Check if the private key file exists
+                if (privateKeyFile.exists()) {
+                    jsch.addIdentity(privateKeyPathAndroid);
+                }
                 Session session = jsch.getSession(username, serverAddress, Integer.parseInt(port));
                 session.setConfig("StrictHostKeyChecking", "no");
                 session.setConfig("PreferredAuthentications", "publickey,password");
-                jsch.addIdentity(privateKeyPathAndroid);
                 session.setPassword(password);
                 try {
                     session.connect();
@@ -591,11 +604,16 @@ public class MainActivity3 extends Activity {
                 String remoteFileName = new File(localFileLocation).getName();
                 remoteFileDestination = "/home/" + username + "/Downloads/" + remoteFileName;
 
-                JSch jsch = new JSch();
+                    JSch jsch = new JSch();
+                    File privateKeyFile = new File(privateKeyPathAndroid);
+
+                    // Check if the private key file exists
+                    if (privateKeyFile.exists()) {
+                        jsch.addIdentity(privateKeyPathAndroid);
+                    }
                 Session transferSession = jsch.getSession(username, serverAddress, Integer.parseInt(port));
                 transferSession.setConfig("StrictHostKeyChecking", "no");
                 transferSession.setConfig("PreferredAuthentications", "publickey,password");
-                jsch.addIdentity(privateKeyPathAndroid);
                 transferSession.setPassword(password);
                 transferSession.connect();
 

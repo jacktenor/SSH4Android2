@@ -66,6 +66,6 @@
     <string name="deny6000">DENY</string>
     <string name="accept_and_add_nauthentication_key">Accept and add\nauthentication key?</string>
     <string name="_22">22</string>
-    <string name="read_me">" SSH4Android provides a graphical user interface for uploading and downloading files and directories over SSH (Secure Shell) connections.  You can also run some commands but with limited feedback. Long pressing a directory in the download section provides directory download options. You have the option to add an authentication key to the servers authorized_keys file for future authorizations when asked if you accept the servers host key."</string>
+    <string name="read_me">" SSH4Android provides a graphical user interface for uploading and downloading files and directories over SSH (Secure Shell) connections.\n You can also run some commands but with limited feedback.\n Long pressing a directory in the download section provides directory download options.\n You have the option to add an authentication key to the servers authorized_keys file for future authorizations when asked if you accept the servers host key."</string>
     <string name="cancel_running">Cancel</string>
 </resources>

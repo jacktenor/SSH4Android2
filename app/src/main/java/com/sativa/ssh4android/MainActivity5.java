@@ -30,6 +30,7 @@ import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.JSchException;
 import com.jcraft.jsch.Session;
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -324,10 +325,19 @@ public class MainActivity5 extends AppCompatActivity {
             cancelCommand();
         });
 
+        String keysDirectory = getApplicationContext().getFilesDir().getPath();
+        String privateKeyPathAndroid = keysDirectory + "/ssh4android";
+
         executor.execute(() -> {
             Session session;
             try {
                 JSch jsch = new JSch();
+                File privateKeyFile = new File(privateKeyPathAndroid);
+
+                // Check if the private key file exists
+                if (privateKeyFile.exists()) {
+                    jsch.addIdentity(privateKeyPathAndroid);
+                }
                 session = jsch.getSession(username, serverAddress, Integer.parseInt(port));
                 session.setConfig("StrictHostKeyChecking", "no"); // Disabled host key checking for now
                 session.setConfig("PreferredAuthentications", "publickey,password");
@@ -382,7 +392,6 @@ public class MainActivity5 extends AppCompatActivity {
                 channelExec.disconnect();
                 session.disconnect();
 
-                runOnUiThread(this::resetUI);
 
             } catch (JSchException | IOException | InterruptedException e) {
                 if (!isCancelled.get()) {
