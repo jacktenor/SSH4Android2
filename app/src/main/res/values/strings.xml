@@ -54,7 +54,7 @@
     <string name="rename">RENAME</string>
     <string name="rename_or_overwrite">File or directory exists!</string>
     <string name="rename_or_overwrite_message">\n</string>
-    <string name="rename_or_overwrite_message_continuation">\nRename , overwrite, or cancel?</string>
+    <string name="rename_or_overwrite_message_continuation">\nRename , Overwrite, or Cancel?</string>
     <string name="progress">Progress</string>
     <string name="output1">Output:</string>
     <string name="output22">Output</string>

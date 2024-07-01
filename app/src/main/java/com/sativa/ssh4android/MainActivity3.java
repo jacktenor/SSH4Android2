@@ -26,8 +26,7 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
-import com.google.gson.Gson;
-import com.google.gson.reflect.TypeToken;
+
 import com.jcraft.jsch.Channel;
 import com.jcraft.jsch.ChannelSftp;
 import com.jcraft.jsch.JSch;
@@ -52,12 +51,10 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class MainActivity3 extends Activity {
@@ -80,6 +77,7 @@ public class MainActivity3 extends Activity {
     private final AtomicInteger lastProgress = new AtomicInteger(-1);
     private String port;
     private String privateKeyPathAndroid;
+
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -122,7 +120,6 @@ public class MainActivity3 extends Activity {
         SharedPreferences sharedPreferences = getSharedPreferences("InputHistory", MODE_PRIVATE);
         inputHistory = new HashSet<>(sharedPreferences.getStringSet(INPUT_HISTORY_KEY, new HashSet<>()));
 
-        // Set up AutoCompleteTextView with input history
         ArrayAdapter<String> autoCompleteAdapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, new ArrayList<>(inputHistory));
         inputAutoComplete.setAdapter(autoCompleteAdapter);
 
@@ -130,45 +127,35 @@ public class MainActivity3 extends Activity {
         questions.add("SSH server address?");
         questions.add("Username?");
         questions.add("Password?");
-        questions.add("port?");
+        questions.add("Port?");
 
         currentQuestionIndex = 0;
         setNextQuestion();
-
-        saveInputHistory(new ArrayList<>(inputHistory));
-
-        progressBar.setVisibility(View.GONE); // Set initial visibility to GONE
 
         enterButton.setOnClickListener(view -> handleInput());
     }
 
     private void checkAndRequestPermission() {
-        if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
                 != PackageManager.PERMISSION_GRANTED) {
-            // Permission is not granted, request it
             ActivityCompat.requestPermissions(this,
                     new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
                     REQUEST_WRITE_EXTERNAL_STORAGE);
         } else {
-            // Permission is already granted, proceed with file operation
-            // For example, call connectAndListDirectory();
             loadInputHistory();
         }
     }
 
-    // Override onRequestPermissionsResult to handle the result of the permission request
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == REQUEST_WRITE_EXTERNAL_STORAGE)
+        if (requestCode == REQUEST_WRITE_EXTERNAL_STORAGE) {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                // Permission was granted, proceed with file operation
-                // For example, call connectAndListDirectory();
                 loadInputHistory();
             } else {
-                // Permission denied, show a message or take appropriate action
-                loadInputHistory();
+                runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "Permission denied.\nSome functions may not work."));
             }
+        }
     }
 
     private Set<String> loadInputHistory() {
@@ -187,41 +174,31 @@ public class MainActivity3 extends Activity {
     private void setNextQuestion() {
         inputAutoComplete.setHint(questions.get(currentQuestionIndex));
 
-        // Set default port to 22 if the current question is about the port
         if (currentQuestionIndex == 3) {
             inputAutoComplete.setText(R.string._22);
         } else {
             inputAutoComplete.setText("");
         }
 
-        currentQuestionIndex++;
-
-        // Save the new password for the current server address and username
-        Credential credential = new Credential(serverAddress, username, password);
-        credential.saveCredentials(getApplicationContext());
-
-        // Retrieve saved credentials
-        Credential savedCredentials = Credential.getSavedCredentials(getApplicationContext());
-
-        if (savedCredentials != null && currentQuestionIndex == 3
-                && savedCredentials.serverAddress().equals(serverAddress)
-                && savedCredentials.username().equals(username)) {
-            // Fill the password only if the saved server address and username match the current ones
-            String savedPassword = getPassword(serverAddress, username);
-            if (savedPassword != null) {
-                inputAutoComplete.setText(savedPassword);
-            }
-        }
-
-        // Set up AutoCompleteTextView with input history for non-password inputs
-        if (currentQuestionIndex != 3) {
+        if (currentQuestionIndex != 2) {
             Set<String> inputHistory = loadInputHistory();
             ArrayAdapter<String> autoCompleteAdapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, new ArrayList<>(inputHistory));
             inputAutoComplete.setAdapter(autoCompleteAdapter);
         } else {
-            // Remove the password from the adapter during the password entry phase
             inputAutoComplete.setAdapter(null);
+
+            // Retrieve saved credentials
+            SharedPreferences sharedPreferences = getSharedPreferences("SavedCredentials", MODE_PRIVATE);
+            String savedServerAddress = sharedPreferences.getString("serverAddress", null);
+            String savedUsername = sharedPreferences.getString("username", null);
+            String savedPassword = sharedPreferences.getString("password", null);
+
+            if (savedServerAddress != null && savedUsername != null && savedPassword != null
+                    && savedServerAddress.equals(serverAddress) && savedUsername.equals(username)) {
+                inputAutoComplete.setText(savedPassword);
+            }
         }
+        currentQuestionIndex++;
     }
 
     private void updateInputHistory(String newInput) {
@@ -232,15 +209,9 @@ public class MainActivity3 extends Activity {
     private void handleInput() {
         String input = inputAutoComplete.getText().toString();
 
-        // Update input history
-        updateInputHistory(input);
-
-        // Update input history
-        Set<String> inputHistory = loadInputHistory();
-        inputHistory.add(input);
-        saveInputHistory(new ArrayList<>(inputHistory));
-
-        AtomicBoolean savePassword = new AtomicBoolean(false);
+        if (currentQuestionIndex != 3) {
+            updateInputHistory(input);
+        }
 
         switch (currentQuestionIndex - 1) {
             case 0:
@@ -252,72 +223,38 @@ public class MainActivity3 extends Activity {
                 inputAutoComplete.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
                 break;
             case 2:
-                savePassword.set(savePasswordCheckbox.isChecked());
                 password = input;
-                if (savePassword.get()) {
-                    savePassword();
+                if (savePasswordCheckbox.isChecked()) {
+                    savePassword(serverAddress, username, password);
                 }
-                inputAutoComplete.setText("");
                 savePasswordCheckbox.setVisibility(View.GONE);
+                inputAutoComplete.setText("");
                 inputAutoComplete.setInputType(InputType.TYPE_CLASS_TEXT);
                 break;
             case 3:
-                port = input.isEmpty() ? "22" : input;  // Use default port 22 if input is empty
+                port = input.isEmpty() ? "22" : input;
                 break;
         }
 
         if (currentQuestionIndex < questions.size()) {
-            // Set next question
             setNextQuestion();
         } else {
+            inputAutoComplete.setText("");
             connectAndExecuteCommand();
         }
     }
 
-    // Add a method to save the password to SharedPreferences
-    private void savePassword() {
+    private void savePassword(String serverAddress, String username, String password) {
         SharedPreferences sharedPreferences = getSharedPreferences("SavedCredentials", MODE_PRIVATE);
         SharedPreferences.Editor editor = sharedPreferences.edit();
 
-        // Retrieve existing passwords map
-        Map<String, String> passwordsMap = getPasswordsMap();
-
-        // Save the new password for the current server address and username
-        passwordsMap.put(serverAddress + "_" + username, password);
-
-        // Save the updated passwords map
-        savePasswordsMap(passwordsMap);
-
-        editor.putString("savedServerAddress", serverAddress);
-        editor.putString("savedUsername", username);
+        editor.putString("serverAddress", serverAddress);
+        editor.putString("username", username);
+        editor.putString("password", password);
         editor.apply();
-    }
-
-    private Map<String, String> getPasswordsMap() {
-        SharedPreferences sharedPreferences = getSharedPreferences("SavedCredentials", MODE_PRIVATE);
-        String passwordsJson = sharedPreferences.getString("passwordsMap", "{}");
-        return new Gson().fromJson(passwordsJson, new TypeToken<Map<String, String>>() {
-        }.getType());
-    }
-
-    private void savePasswordsMap(Map<String, String> passwordsMap) {
-        SharedPreferences sharedPreferences = getSharedPreferences("SavedCredentials", MODE_PRIVATE);
-        SharedPreferences.Editor editor = sharedPreferences.edit();
-        String passwordsJson = new Gson().toJson(passwordsMap);
-        editor.putString("passwordsMap", passwordsJson);
-        editor.apply();
-    }
-
-    private String getPassword(String serverAddress, String username) {
-        // Retrieve passwords map
-        Map<String, String> passwordsMap = getPasswordsMap();
-
-        // Get the password for the given server address and username
-        return passwordsMap.get(serverAddress + "_" + username);
     }
 
     private void connectAndExecuteCommand() {
-
         Executor executor = Executors.newSingleThreadExecutor();
 
         executor.execute(() -> {
@@ -327,7 +264,6 @@ public class MainActivity3 extends Activity {
                 JSch jsch = new JSch();
                 File privateKeyFile = new File(privateKeyPathAndroid);
 
-                // Check if the private key file exists
                 if (privateKeyFile.exists()) {
                     jsch.addIdentity(privateKeyPathAndroid);
                 }
@@ -347,7 +283,6 @@ public class MainActivity3 extends Activity {
             final String finalHostKey = hostKey;
             runOnUiThread(() -> {
                 if (finalHostKey != null) {
-                    // Show the host key dialog for verification
                     showHostKeyDialog(finalHostKey);
                 } else {
                     runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "Host key error."));
@@ -604,13 +539,13 @@ public class MainActivity3 extends Activity {
                 String remoteFileName = new File(localFileLocation).getName();
                 remoteFileDestination = "/home/" + username + "/Downloads/" + remoteFileName;
 
-                    JSch jsch = new JSch();
-                    File privateKeyFile = new File(privateKeyPathAndroid);
+                JSch jsch = new JSch();
+                File privateKeyFile = new File(privateKeyPathAndroid);
 
-                    // Check if the private key file exists
-                    if (privateKeyFile.exists()) {
-                        jsch.addIdentity(privateKeyPathAndroid);
-                    }
+                // Check if the private key file exists
+                if (privateKeyFile.exists()) {
+                    jsch.addIdentity(privateKeyPathAndroid);
+                }
                 Session transferSession = jsch.getSession(username, serverAddress, Integer.parseInt(port));
                 transferSession.setConfig("StrictHostKeyChecking", "no");
                 transferSession.setConfig("PreferredAuthentications", "publickey,password");

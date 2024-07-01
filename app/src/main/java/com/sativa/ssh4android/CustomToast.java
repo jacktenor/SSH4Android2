@@ -20,7 +20,7 @@ public class CustomToast {
 
         // Create and show the custom toast
         Toast toast = new Toast(context);
-        toast.setGravity(Gravity.TOP, 0, 250);
+        toast.setGravity(Gravity.TOP, 0, 150);
         toast.setDuration(Toast.LENGTH_LONG);
         toast.setView(layout);
         toast.show();

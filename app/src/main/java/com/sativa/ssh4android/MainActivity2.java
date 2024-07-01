@@ -147,16 +147,6 @@ public class MainActivity2 extends Activity {
         SharedPreferences sharedPreferences = getSharedPreferences("InputHistory", MODE_PRIVATE);
         inputHistory = new HashSet<>(sharedPreferences.getStringSet(INPUT_HISTORY_KEY, new HashSet<>()));
 
-        // Set up AutoCompleteTextView with input history for non-password inputs
-        if (currentQuestionIndex != 3) {
-            Set<String> inputHistory = loadInputHistory();
-            ArrayAdapter<String> autoCompleteAdapter = new ArrayAdapter<>(this, android.R.layout.simple_dropdown_item_1line, new ArrayList<>(inputHistory));
-            inputAutoComplete.setAdapter(autoCompleteAdapter);
-        } else {
-            // Remove the password from the adapter during the password entry phase
-            inputAutoComplete.setAdapter(null);
-        }
-
         questions = new ArrayList<>();
         questions.add("SSH server address?");
         questions.add("Username?");
@@ -341,8 +331,10 @@ public class MainActivity2 extends Activity {
     }
 
     private void updateInputHistory(String newInput) {
-        inputHistory.add(newInput);
-        saveInputHistory(new ArrayList<>(inputHistory));
+        if (currentQuestionIndex - 1 != 2) { // Skip password entry
+            inputHistory.add(newInput);
+            saveInputHistory(new ArrayList<>(inputHistory));
+        }
     }
 
     private void handleInput() {
@@ -350,11 +342,6 @@ public class MainActivity2 extends Activity {
 
         // Update input history
         updateInputHistory(input);
-
-        // Update input history
-        Set<String> inputHistory = loadInputHistory();
-        inputHistory.add(input);
-        saveInputHistory(new ArrayList<>(inputHistory));
 
         AtomicBoolean savePassword = new AtomicBoolean(false);
 
@@ -478,7 +465,7 @@ public class MainActivity2 extends Activity {
         });
     }
 
-private void showHostKeyDialog(String hostKey) {
+    private void showHostKeyDialog(String hostKey) {
         // Inflate the custom dialog layout
         View dialogView = getLayoutInflater().inflate(R.layout.dialog_host_key, null);
 
@@ -558,12 +545,12 @@ private void showHostKeyDialog(String hostKey) {
                     }
                 }
 
-                    File privateKeyFile = new File(privateKeyPathAndroid);
+                File privateKeyFile = new File(privateKeyPathAndroid);
 
-                    // Check if the private key file exists
-                    if (privateKeyFile.exists()) {
-                        jsch.addIdentity(privateKeyPathAndroid);
-                    }
+                // Check if the private key file exists
+                if (privateKeyFile.exists()) {
+                    jsch.addIdentity(privateKeyPathAndroid);
+                }
                 Session session = jsch.getSession(username, serverAddress, Integer.parseInt(port));
                 session.setConfig("StrictHostKeyChecking", "no");
                 session.setConfig("PreferredAuthentications", "publickey,password");
@@ -796,7 +783,7 @@ private void showHostKeyDialog(String hostKey) {
                 // You can continue with renaming logic here
                 alertDialog.dismiss(); // Dismiss the dialog
                 // Add your rename logic here
-                renameFile(remoteFilePath, localFilePath);
+                renameFile3(remoteFilePath, localFilePath, showHiddenFiles);
             });
 
             overwriteButton.setOnClickListener(view -> {
@@ -1255,6 +1242,47 @@ private void showHostKeyDialog(String hostKey) {
         }
         // Proceed with downloading or any other action
         downloadCompressedDirectory(remoteFilePath, renamedFilePath);
+    }
+
+    private void renameFile3(String remoteFilePath, String localFilePath, boolean showHiddenFiles) {
+        // Extract the filename and file extension from the localFilePath
+        File originalFile = new File(localFilePath);
+
+        String filename = originalFile.getName();
+        String extension = "";
+        int dotIndex = filename.lastIndexOf('.');
+        if (dotIndex > 0 && dotIndex < filename.length() - 1) {
+            extension = filename.substring(dotIndex);
+            filename = filename.substring(0, dotIndex);
+        }
+
+        // Generate a unique filename by appending a number in parentheses
+        int counter = 1;
+        String renamedFilePath;
+        do {
+            renamedFilePath = localFilePath.replace(filename + extension, filename + "(" + counter + ")" + extension);
+            counter++;
+        } while (new File(renamedFilePath).exists());
+
+        File renamedFile = new File(renamedFilePath);
+
+        // Copy the contents of the original file to the new file
+        try (InputStream inputStream = new FileInputStream(originalFile);
+             OutputStream outputStream = new FileOutputStream(renamedFile)) {
+            byte[] buffer = new byte[1024];
+            int bytesRead;
+            while ((bytesRead = inputStream.read(buffer)) != -1) {
+                outputStream.write(buffer, 0, bytesRead);
+            }
+
+        } catch (IOException e) {
+            Log.w("SSH4Android", e.getMessage(), e);
+            // Handle any exceptions during file copy
+            runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "Error copying file contents."));
+            return;
+        }
+        // Proceed with downloading or any other action
+        downloadFileWithOverwrite(remoteFilePath, renamedFilePath, showHiddenFiles);
     }
 
     private void updateFileListView(List<String> newDirectoryContents, boolean showHiddenFiles){
