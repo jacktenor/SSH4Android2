@@ -49,8 +49,9 @@
         android:layout_width="wrap_content"
         android:layout_height="50dp"
         android:layout_marginTop="125dp"
+        android:textSize="12sp"
         android:buttonTint="#757575"
-        android:text="@string/save_npassword3"
+        android:text="@string/save_npassword5"
         android:textColor="#FFFFFF"
         android:visibility="gone"
         app:layout_constraintStart_toEndOf="@+id/inputAutoComplete"
@@ -97,5 +98,21 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintStart_toStartOf="parent" />
+
+    <ToggleButton
+        android:id="@+id/togglePasswordVisibility"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="130dp"
+        android:background="?attr/selectableItemBackground"
+        android:buttonTint="#757575"
+        android:drawableTint="#757575"
+        android:textColor="#FFFFFF"
+        android:textSize="12sp"
+        android:textOff="@string/show"
+        android:textOn="@string/hide"
+        android:visibility="gone"
+        app:layout_constraintEnd_toStartOf="@+id/inputAutoComplete"
+        app:layout_constraintTop_toTopOf="parent" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

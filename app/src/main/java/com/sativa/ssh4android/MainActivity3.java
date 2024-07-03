@@ -23,6 +23,8 @@ import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.ToggleButton;
+
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -48,6 +50,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.HashSet;
 import java.util.List;
@@ -77,7 +80,7 @@ public class MainActivity3 extends Activity {
     private final AtomicInteger lastProgress = new AtomicInteger(-1);
     private String port;
     private String privateKeyPathAndroid;
-
+    private ToggleButton togglePasswordVisibility;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -96,6 +99,7 @@ public class MainActivity3 extends Activity {
         progressBar = findViewById(R.id.progressBar);
         savePasswordCheckbox = findViewById(R.id.savePasswordCheckbox);
         button = findViewById(R.id.button);
+        togglePasswordVisibility = findViewById(R.id.togglePasswordVisibility);
 
         inputAutoComplete.setInputType(InputType.TYPE_CLASS_TEXT);
 
@@ -133,6 +137,20 @@ public class MainActivity3 extends Activity {
         setNextQuestion();
 
         enterButton.setOnClickListener(view -> handleInput());
+        final Animation myAnim = AnimationUtils.loadAnimation(this, R.anim.bounce);
+        enterButton.startAnimation(myAnim);
+
+        togglePasswordVisibility.setOnCheckedChangeListener((buttonView, isChecked) ->  {
+            if (isChecked) {
+                // Show password
+                inputAutoComplete.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD);
+            } else {
+                // Hide password
+                inputAutoComplete.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+            }
+            // Move the cursor to the end of the text
+            inputAutoComplete.setSelection(inputAutoComplete.getText().length());
+        });
     }
 
     private void checkAndRequestPermission() {
@@ -153,9 +171,9 @@ public class MainActivity3 extends Activity {
             if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 loadInputHistory();
             } else {
-                runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "Permission denied.\nSome functions may not work."));
-            }
+                Log.i("SSH", "Permission denied: " + Arrays.toString(permissions));
         }
+      }
     }
 
     private Set<String> loadInputHistory() {
@@ -219,6 +237,7 @@ public class MainActivity3 extends Activity {
                 break;
             case 1:
                 username = input;
+                togglePasswordVisibility.setVisibility(View.VISIBLE);
                 savePasswordCheckbox.setVisibility(View.VISIBLE);
                 inputAutoComplete.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
                 break;
@@ -227,6 +246,7 @@ public class MainActivity3 extends Activity {
                 if (savePasswordCheckbox.isChecked()) {
                     savePassword(serverAddress, username, password);
                 }
+                togglePasswordVisibility.setVisibility(View.GONE);
                 savePasswordCheckbox.setVisibility(View.GONE);
                 inputAutoComplete.setText("");
                 inputAutoComplete.setInputType(InputType.TYPE_CLASS_TEXT);

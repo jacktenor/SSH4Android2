@@ -26,6 +26,8 @@ import android.widget.CheckBox;
 import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.ToggleButton;
+
 import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -96,6 +98,7 @@ public class MainActivity2 extends Activity {
     private boolean isChecked = false;
     private String keysDirectory;
     private String privateKeyPathAndroid;
+    private ToggleButton togglePasswordVisibility;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -103,6 +106,7 @@ public class MainActivity2 extends Activity {
         setContentView(R.layout.activity_main2);
 
         getWindow().setBackgroundDrawableResource(R.drawable.panther);
+        checkAndRequestPermission();
 
         keysDirectory = getApplicationContext().getFilesDir().getPath();
         privateKeyPathAndroid = keysDirectory + "/ssh4android";
@@ -114,6 +118,7 @@ public class MainActivity2 extends Activity {
         progressBar = findViewById(R.id.progressBar);
         savePasswordCheckbox = findViewById(R.id.savePasswordCheckbox);
         CheckBox showHiddenFilesCheckbox = findViewById(R.id.showHiddenFilesCheckbox);
+        togglePasswordVisibility = findViewById(R.id.togglePasswordVisibility);
 
         inputAutoComplete.setInputType(InputType.TYPE_CLASS_TEXT);
 
@@ -163,6 +168,19 @@ public class MainActivity2 extends Activity {
         enterButton.setOnClickListener(view -> handleInput());
         final Animation myAnim = AnimationUtils.loadAnimation(this, R.anim.bounce);
         enterButton.startAnimation(myAnim);
+        togglePasswordVisibility.setOnCheckedChangeListener((buttonView, isChecked)->
+
+        {
+            if (isChecked) {
+                // Show password
+                inputAutoComplete.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD);
+            } else {
+                // Hide password
+                inputAutoComplete.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+            }
+            // Move the cursor to the end of the text
+            inputAutoComplete.setSelection(inputAutoComplete.getText().length());
+        });
 
         // Add this block for handling long press on directory
         fileListView.setOnItemLongClickListener((parent, view, position, id) -> {
@@ -189,6 +207,7 @@ public class MainActivity2 extends Activity {
             downloadFile(remoteFilePath, localFilePath, Boolean.parseBoolean(showHiddenFiles));
         });
     }
+
 
     private void checkAndRequestPermission() {
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
@@ -351,6 +370,7 @@ public class MainActivity2 extends Activity {
                 break;
             case 1:
                 username = input;
+                togglePasswordVisibility.setVisibility(View.VISIBLE);
                 savePasswordCheckbox.setVisibility(View.VISIBLE);
                 inputAutoComplete.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
                 break;
@@ -360,6 +380,7 @@ public class MainActivity2 extends Activity {
                 if (savePassword.get()) {
                     savePassword();
                 }
+                togglePasswordVisibility.setVisibility(View.GONE);
                 savePasswordCheckbox.setVisibility(View.GONE);
                 inputAutoComplete.setInputType(InputType.TYPE_CLASS_TEXT);
                 break;

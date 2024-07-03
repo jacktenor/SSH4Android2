@@ -21,6 +21,7 @@ import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.ScrollView;
 import android.widget.TextView;
+import android.widget.ToggleButton;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
@@ -87,11 +88,16 @@ public class MainActivity5 extends AppCompatActivity {
     private String keysDirectory;
     private String privateKeyPathAndroid;
     private AlertDialog alertDialog;
+    private ToggleButton togglePasswordVisibility;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main5);
+
+        getWindow().setBackgroundDrawableResource(R.drawable.panther);
+
+        checkAndRequestPermission();
 
         keysDirectory = getApplicationContext().getFilesDir().getPath();
         privateKeyPathAndroid = keysDirectory + "/ssh4android";
@@ -105,10 +111,7 @@ public class MainActivity5 extends AppCompatActivity {
         outputTextView = findViewById(R.id.outputTextView);
         textView2 = findViewById(R.id.textView2);
         outputScrollView = findViewById(R.id.outputScrollView);
-
-        checkAndRequestPermission();
-
-        getWindow().setBackgroundDrawableResource(R.drawable.panther);
+        togglePasswordVisibility = findViewById(R.id.togglePasswordVisibility);
 
         inputAutoComplete.setInputType(InputType.TYPE_CLASS_TEXT);
 
@@ -156,6 +159,20 @@ public class MainActivity5 extends AppCompatActivity {
         });
         final Animation myAnim = AnimationUtils.loadAnimation(this, R.anim.bounce);
         enterButton.startAnimation(myAnim);
+
+        togglePasswordVisibility.setOnCheckedChangeListener((buttonView, isChecked) ->
+
+        {
+            if (isChecked) {
+                // Show password
+                inputAutoComplete.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD);
+            } else {
+                // Hide password
+                inputAutoComplete.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+            }
+            // Move the cursor to the end of the text
+            inputAutoComplete.setSelection(inputAutoComplete.getText().length());
+        });
     }
 
     private void checkAndRequestPermission() {
@@ -244,6 +261,8 @@ public class MainActivity5 extends AppCompatActivity {
                 break;
             case 1:
                 username = input;
+                togglePasswordVisibility.setVisibility(View.VISIBLE);
+
                 savePasswordCheckbox.setVisibility(View.VISIBLE);
                 inputAutoComplete.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
                 break;
@@ -254,6 +273,7 @@ public class MainActivity5 extends AppCompatActivity {
                     Credential credential = new Credential(serverAddress, username, password);
                     credential.saveCredentials(getApplicationContext());
                 }
+                togglePasswordVisibility.setVisibility(View.GONE);
                 savePasswordCheckbox.setVisibility(View.GONE);
                 inputAutoComplete.setText("");
                 inputAutoComplete.setInputType(InputType.TYPE_CLASS_TEXT);
@@ -673,24 +693,24 @@ public class MainActivity5 extends AppCompatActivity {
     public record Credential(String serverAddress, String username, String password) {
 
         public void saveCredentials(Context context) {
-                SharedPreferences sharedPreferences = context.getSharedPreferences("SavedCredentials", MODE_PRIVATE);
-                SharedPreferences.Editor editor = sharedPreferences.edit();
-                editor.putString("serverAddress", serverAddress);
-                editor.putString("username", username);
-                editor.putString("password", password);
-                editor.apply();
-            }
-
-            public static Credential getSavedCredentials(Context context) {
-                SharedPreferences sharedPreferences = context.getSharedPreferences("SavedCredentials", MODE_PRIVATE);
-                String serverAddress = sharedPreferences.getString("serverAddress", null);
-                String username = sharedPreferences.getString("username", null);
-                String password = sharedPreferences.getString("password", null);
-
-                if (serverAddress != null && username != null && password != null) {
-                    return new Credential(serverAddress, username, password);
-                }
-                return null;
-            }
+            SharedPreferences sharedPreferences = context.getSharedPreferences("SavedCredentials", MODE_PRIVATE);
+            SharedPreferences.Editor editor = sharedPreferences.edit();
+            editor.putString("serverAddress", serverAddress);
+            editor.putString("username", username);
+            editor.putString("password", password);
+            editor.apply();
         }
+
+        public static Credential getSavedCredentials(Context context) {
+            SharedPreferences sharedPreferences = context.getSharedPreferences("SavedCredentials", MODE_PRIVATE);
+            String serverAddress = sharedPreferences.getString("serverAddress", null);
+            String username = sharedPreferences.getString("username", null);
+            String password = sharedPreferences.getString("password", null);
+
+            if (serverAddress != null && username != null && password != null) {
+                return new Credential(serverAddress, username, password);
+            }
+            return null;
+        }
+    }
 }
