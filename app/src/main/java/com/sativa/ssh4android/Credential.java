@@ -3,28 +3,7 @@ package com.sativa.ssh4android;
 import android.content.Context;
 import android.content.SharedPreferences;
 
-public class Credential {
-    private String serverAddress;
-    private String username;
-    private String password;
-
-    public Credential(String serverAddress, String username, String password) {
-        this.serverAddress = serverAddress;
-        this.username = username;
-        this.password = password;
-    }
-
-    public String getServerAddress() {
-        return serverAddress;
-    }
-
-    public String getUsername() {
-        return username;
-    }
-
-    public String getPassword() {
-        return password;
-    }
+public record Credential(String serverAddress, String username, String password) {
 
     // Save credentials to SharedPreferences
     public void saveCredentials(Context context) {

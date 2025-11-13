@@ -1,2 +1,4 @@
-include ':app'
 rootProject.name = "SSH4Android"
+include(":app")
+include(":emulatorview")
+project(":emulatorview").projectDir = file("third_party/android-terminal/emulatorview")

@@ -1,9 +1,7 @@
 package com.sativa.ssh4android;
 
-import static com.sativa.ssh4android.MainActivity5.REQUEST_WRITE_EXTERNAL_STORAGE;
 import android.Manifest;
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.content.ContentResolver;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -64,6 +62,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 public class MainActivity3 extends Activity {
     private static final int FILE_PICKER_REQUEST_CODE = 123;
+    private static final int REQUEST_WRITE_EXTERNAL_STORAGE = 1;
     private AutoCompleteTextView inputAutoComplete;
     private Button enterButton;
     private List<String> questions;
@@ -72,13 +71,14 @@ public class MainActivity3 extends Activity {
     private String username;
     private String serverAddress;
     private String password;
-    private AlertDialog alertDialog;
+    private androidx.appcompat.app.AlertDialog alertDialog;
     private Set<String> inputHistory;
     private ProgressBar progressBar;
     protected String remoteFileDestination;
     private CheckBox savePasswordCheckbox;
     private Button button;
     private final AtomicInteger lastProgress = new AtomicInteger(-1);
+    private String port;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -112,7 +112,6 @@ public class MainActivity3 extends Activity {
             return false;
         });
 
-
         inputAutoComplete.requestFocus();
         getWindow().setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE);
 
@@ -127,6 +126,7 @@ public class MainActivity3 extends Activity {
         questions.add("SSH server address?");
         questions.add("Username?");
         questions.add("Password?");
+        questions.add("port?");
 
         currentQuestionIndex = 0;
         setNextQuestion();
@@ -163,7 +163,7 @@ public class MainActivity3 extends Activity {
                 loadInputHistory();
             } else {
                 // Permission denied, show a message or take appropriate action
-                loadInputHistory(); 
+                loadInputHistory();
             }
     }
 
@@ -182,7 +182,14 @@ public class MainActivity3 extends Activity {
 
     private void setNextQuestion() {
         inputAutoComplete.setHint(questions.get(currentQuestionIndex));
-        inputAutoComplete.setText("");
+
+        // Set default port to 22 if the current question is about the port
+        if (currentQuestionIndex == 3) {
+            inputAutoComplete.setText(R.string._22);
+        } else {
+            inputAutoComplete.setText("");
+        }
+
         currentQuestionIndex++;
 
         // Save the new password for the current server address and username
@@ -193,8 +200,8 @@ public class MainActivity3 extends Activity {
         Credential savedCredentials = Credential.getSavedCredentials(getApplicationContext());
 
         if (savedCredentials != null && currentQuestionIndex == 3
-                && savedCredentials.getServerAddress().equals(serverAddress)
-                && savedCredentials.getUsername().equals(username)) {
+                && savedCredentials.serverAddress().equals(serverAddress)
+                && savedCredentials.username().equals(username)) {
             // Fill the password only if the saved server address and username match the current ones
             String savedPassword = getPassword(serverAddress, username);
             if (savedPassword != null) {
@@ -249,6 +256,9 @@ public class MainActivity3 extends Activity {
                 inputAutoComplete.setText("");
                 savePasswordCheckbox.setVisibility(View.GONE);
                 inputAutoComplete.setInputType(InputType.TYPE_CLASS_TEXT);
+                break;
+            case 3:
+                port = input.isEmpty() ? "22" : input;  // Use default port 22 if input is empty
                 break;
         }
 
@@ -313,7 +323,7 @@ public class MainActivity3 extends Activity {
 
             try {
                 JSch jsch = new JSch();
-                session = jsch.getSession(username, serverAddress, 22);
+                session = jsch.getSession(username, serverAddress, Integer.parseInt(port));
                 session.setConfig("StrictHostKeyChecking", "yes");
                 session.setConfig("PreferredAuthentications", "publickey,password");
                 session.setPassword(password);
@@ -339,46 +349,48 @@ public class MainActivity3 extends Activity {
     }
 
     private void showHostKeyDialog(String hostKey) {
-
-        // Inflate the custom dialog layout
         View dialogView = getLayoutInflater().inflate(R.layout.dialog_host_key, null);
 
-        // Find UI elements in the inflated layout
         TextView titleTextView = dialogView.findViewById(R.id.dialog_title);
         TextView messageTextView = dialogView.findViewById(R.id.dialog_message);
         Button acceptButton = dialogView.findViewById(R.id.button_accept);
         Button denyButton = dialogView.findViewById(R.id.button_deny);
+        Button addKeyButton = dialogView.findViewById(R.id.addKeyButton);
 
-        // Set content and behavior for the dialog elements
         titleTextView.setText(R.string.host_key_verification6);
         messageTextView.setText(String.format("%s%s%s", getString(R.string.host_key_fingerprint7), hostKey, getString(R.string.do_you_want_to_accept_it)));
 
-
-        // Set click listeners for buttons
         acceptButton.setOnClickListener(view -> {
             final Animation myAnim = AnimationUtils.loadAnimation(MainActivity3.this, R.anim.bounce);
             acceptButton.startAnimation(myAnim);
-            // Handle host key acceptance
-            // You can continue with the remote file transfer here
-            performSSHOperations();
-            openFilePicker();
+            synchronized (MainActivity3.this) {
+                MainActivity3.this.notify();
+            }
             alertDialog.dismiss();
+            openFilePicker();
         });
 
         denyButton.setOnClickListener(view -> {
             final Animation myAnim = AnimationUtils.loadAnimation(MainActivity3.this, R.anim.bounce);
             denyButton.startAnimation(myAnim);
-            // Handle host key denial
-            // Show a message or take appropriate action
-            alertDialog.dismiss(); // Dismiss the dialog
+            synchronized (MainActivity3.this) {
+                MainActivity3.this.notify();
+            }
+            alertDialog.dismiss();
             runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "Host key denied."));
-            Intent intent = new Intent(MainActivity3.this, MainActivity.class);
-            startActivity(intent);
-            finish(); // Close the current activity (MainActivity3)
         });
 
-        // Create and show the AlertDialog with the custom layout
-        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity3.this);
+        addKeyButton.setOnClickListener(view -> {
+            final Animation myAnim = AnimationUtils.loadAnimation(MainActivity3.this, R.anim.bounce);
+            addKeyButton.startAnimation(myAnim);
+            synchronized (MainActivity3.this) {
+                MainActivity3.this.notify();
+            }
+            alertDialog.dismiss();
+            performSSHOperations();
+            openFilePicker();
+        });
+        androidx.appcompat.app.AlertDialog.Builder builder = new androidx.appcompat.app.AlertDialog.Builder(MainActivity3.this);
         builder.setView(dialogView);
         alertDialog = builder.create();
         alertDialog.show();
@@ -391,24 +403,22 @@ public class MainActivity3 extends Activity {
     }
 
     private void performSSHOperations() {
-        String publicKeyPathServer = "/home/" + username + "/.ssh/authorized_keys";
-        String keysDirectory = getApplicationContext().getFilesDir().getPath();
-        String privateKeyPathAndroid = keysDirectory + "/ssh4android";
-        String publicKeyPathAndroid = keysDirectory + "/ssh4android.pub";
-
         Executor executor = Executors.newSingleThreadExecutor();
 
         executor.execute(() -> {
+            String keysDirectory = getApplicationContext().getFilesDir().getPath();
+            String privateKeyPathAndroid = keysDirectory + "/ssh4android";
+            String publicKeyPathAndroid = keysDirectory + "/ssh4android.pub";
+            String publicKeyPathServer = "/home/" + username + "/.ssh/authorized_keys";
+
             try {
                 JSch jsch = new JSch();
-                Session session = jsch.getSession(username, serverAddress, 22);
-                session.setConfig("StrictHostKeyChecking", "no");
-                session.setConfig("PreferredAuthentications", "publickey,password");
 
                 final Path path = Paths.get(privateKeyPathAndroid);
                 if (!Files.exists(path)) {
                     KeyPair keyPair = KeyPair.genKeyPair(jsch, KeyPair.RSA);
                     keyPair.writePrivateKey(privateKeyPathAndroid);
+                    Log.i("SSH", "Generating private key... : " + privateKeyPathAndroid);
                     Files.setPosixFilePermissions(path, PosixFilePermissions.fromString("rw-------"));
 
                     byte[] publicKeyBytes = keyPair.getPublicKeyBlob();
@@ -416,22 +426,32 @@ public class MainActivity3 extends Activity {
 
                     try (FileWriter writer = new FileWriter(publicKeyPathAndroid)) {
                         writer.write("ssh-rsa " + publicKeyString + " " + username);
+                    } catch (IOException e) {
+                        Log.w("SSH4Android", e.getMessage(), e);
+                        runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "IOException: " + e.getMessage()));
                     }
                 }
 
+                Session session = jsch.getSession(username, serverAddress, Integer.parseInt(port));
+                session.setConfig("StrictHostKeyChecking", "no");
+                session.setConfig("PreferredAuthentications", "publickey,password");
                 jsch.addIdentity(privateKeyPathAndroid);
                 session.setPassword(password);
-                session.connect();
-
-                Log.d("SSH", "Key-based authentication successful");
-                uploadPublicKey(session, publicKeyPathAndroid, publicKeyPathServer);
+                try {
+                    session.connect();
+                    uploadPublicKey(session, publicKeyPathAndroid, publicKeyPathServer);
+                } catch (JSchException keyAuthException) {
+                    Log.w("SSH4Android", keyAuthException.getMessage(), keyAuthException);
+                    runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "JSchException: " + keyAuthException.getMessage()));
+                }
+                openFilePicker();
 
                 if (session.isConnected()) {
                     session.disconnect();
                 }
-            } catch (JSchException | IOException ex) {
-                Log.w("SSH4Android", ex.getMessage(), ex);
-                runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), ex.getClass().getSimpleName() + ": " + ex.getMessage()));
+            } catch (JSchException | IOException e) {
+                Log.w("SSH4Android", e.getMessage(), e);
+                runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "JSchException | IOException: " + e.getMessage()));
             }
         });
     }
@@ -444,29 +464,21 @@ public class MainActivity3 extends Activity {
 
         final Path path = Paths.get(publicKeyPathAndroid);
         try (InputStream publicKeyStream = Files.newInputStream(path)) {
-
-            Log.d("SSH", "publicKeyPathAndroid(upload): " + publicKeyPathAndroid);
-            Log.d("SSH", "publicKeyPathServer(upload): " + publicKeyPathServer);
-
-            // Read the existing authorized_keys content
             String existingKeysContent = readExistingKeys(session, publicKeyPathServer);
 
-            // Check if the key already exists
             if (publicKeyStream != null && !existingKeysContent.contains(new String(Files.readAllBytes(path)))) {
-                // Append the new key with a newline character at the beginning
                 String newKeyContent = "\n" + new String(Files.readAllBytes(path));
                 String updatedKeysContent = existingKeysContent + newKeyContent;
 
-                // Write the updated content back to the authorized_keys file
                 try (InputStream updatedKeysStream = new ByteArrayInputStream(updatedKeysContent.getBytes())) {
                     channelSftp.put(updatedKeysStream, publicKeyPathServer);
-                    runOnUiThread(() -> GreenCustomToast.showCustomToast(getApplicationContext(), "Key added to accepted_keys"));
+                    runOnUiThread(() -> GreenCustomToast.showCustomToast(getApplicationContext(), "Key added to authorized_keys"));
                 } catch (IOException | SftpException e) {
                     Log.w("SSH4Android", e.getMessage(), e);
                     runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "IOException | SftpException: " + e.getMessage()));
                 }
             } else {
-                Log.d("SSH", "Key already exists in authorized_keys file. Skipping upload.");
+                runOnUiThread(() -> GreenCustomToast.showCustomToast(getApplicationContext(), "Key already exists in authorized_keys"));
             }
         } catch (IOException e) {
             Log.w("SSH4Android", e.getMessage(), e);
@@ -476,9 +488,9 @@ public class MainActivity3 extends Activity {
         }
     }
 
+
     // Read existing keys from the authorized_keys file
-    private String readExistingKeys (Session session, String publicKeyPathServer) throws
-            JSchException, IOException {
+    private String readExistingKeys(Session session, String publicKeyPathServer) throws JSchException, IOException {
         ChannelSftp channelSftp = (ChannelSftp) session.openChannel("sftp");
         channelSftp.connect();
 
@@ -492,8 +504,9 @@ public class MainActivity3 extends Activity {
         }
     }
 
+
     // Replace InputStream#readAllBytes with the alternative method
-    private static byte[] readAllBytes (InputStream inputStream) throws IOException {
+    private byte[] readAllBytes(InputStream inputStream) throws IOException {
         ByteArrayOutputStream buffer = new ByteArrayOutputStream();
         int nRead;
         byte[] data = new byte[16384];
@@ -504,8 +517,8 @@ public class MainActivity3 extends Activity {
 
         buffer.flush();
         return buffer.toByteArray();
-
     }
+
     private void openFilePicker() {
         Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
         intent.addCategory(Intent.CATEGORY_OPENABLE);
@@ -582,7 +595,7 @@ public class MainActivity3 extends Activity {
                 remoteFileDestination = "/home/" + username + "/Downloads/" + remoteFileName;
 
                 JSch jsch = new JSch();
-                Session transferSession = jsch.getSession(username, serverAddress, 22);
+                Session transferSession = jsch.getSession(username, serverAddress, Integer.parseInt(port));
                 transferSession.setConfig("StrictHostKeyChecking", "no");
                 transferSession.setConfig("PreferredAuthentications", "publickey,password");
                 jsch.addIdentity(privateKeyPathAndroid);
@@ -633,7 +646,7 @@ public class MainActivity3 extends Activity {
                         }
                     };
 
-                        // Progress monitoring implementation
+                    // Progress monitoring implementation
                     try {
                         SftpATTRS attrs = sftpChannel.stat(remoteFileDestination);
                         if (attrs != null) {
@@ -700,7 +713,7 @@ public class MainActivity3 extends Activity {
         });
 
         // Create and show the AlertDialog with the custom layout
-        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity3.this);
+        androidx.appcompat.app.AlertDialog.Builder builder = new androidx.appcompat.app.AlertDialog.Builder(MainActivity3.this);
         builder.setView(dialogView);
         runOnUiThread(() -> alertDialog = builder.create());
         runOnUiThread(() -> alertDialog.show());
@@ -742,7 +755,7 @@ public class MainActivity3 extends Activity {
         });
 
         // Create and show the AlertDialog with the custom layout
-        AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity3.this);
+        androidx.appcompat.app.AlertDialog.Builder builder = new androidx.appcompat.app.AlertDialog.Builder(MainActivity3.this);
         builder.setView(dialogView);
 
         runOnUiThread(() ->  alertDialog = builder.create());

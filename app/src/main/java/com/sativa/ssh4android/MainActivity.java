@@ -44,17 +44,17 @@ public class MainActivity extends Activity {
             startActivity(i);
         });
 
+        button3.setOnClickListener(view -> {
+        Intent i = new Intent(MainActivity.this, MainActivity5.class);
+        final Animation myAnim = AnimationUtils.loadAnimation(this, R.anim.bounce);
+        button3.startAnimation(myAnim);
+        startActivity(i);
+        });
+
         button4.setOnClickListener(view -> {
             Intent i = new Intent(MainActivity.this, MainActivity4.class);
             final Animation myAnim = AnimationUtils.loadAnimation(this, R.anim.bounce);
             button4.startAnimation(myAnim);
-            startActivity(i);
-        });
-
-        button3.setOnClickListener(view -> {
-            Intent i = new Intent(MainActivity.this, MainActivity5.class);
-            final Animation myAnim = AnimationUtils.loadAnimation(this, R.anim.bounce);
-            button3.startAnimation(myAnim);
             startActivity(i);
         });
 
@@ -74,7 +74,6 @@ public class MainActivity extends Activity {
             }
         });
     }
-
 
     public void clearInputHistory() {
 

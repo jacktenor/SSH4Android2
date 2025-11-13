@@ -1,0 +1,3 @@
+[submodule "third_party/android-terminal"]
+	path = third_party/android-terminal
+	url = https://github.com/jackpal/Android-Terminal-Emulator.git

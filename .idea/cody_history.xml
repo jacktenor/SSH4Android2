@@ -288,6 +288,7 @@
     <chats>
       <list>
         <chat>
+          <accountId value="VXNlcjo0MDUyODA=" />
           <internalId value="3c76a559-ea34-4214-b6d4-e1993bae1439" />
           <llm>
             <llm>

@@ -77,6 +77,7 @@ public class MainActivity2 extends Activity {
     private int currentQuestionIndex;
     private static final String INPUT_HISTORY_KEY = "input_history";
     private String username;
+    private String port;
     private List<String> directoryContents;
     private String serverAddress;
     private String password;
@@ -154,6 +155,7 @@ public class MainActivity2 extends Activity {
         questions.add("SSH server address?");
         questions.add("Username?");
         questions.add("Password?");
+        questions.add("Port?");
 
         currentQuestionIndex = 0;
         setNextQuestion();
@@ -294,7 +296,14 @@ public class MainActivity2 extends Activity {
 
     private void setNextQuestion() {
         inputAutoComplete.setHint(questions.get(currentQuestionIndex));
-        inputAutoComplete.setText("");
+
+        // Set default port to 22 if the current question is about the port
+        if (currentQuestionIndex == 3) {
+            inputAutoComplete.setText(R.string._22);
+        } else {
+            inputAutoComplete.setText("");
+        }
+
         currentQuestionIndex++;
 
         // Save the new password for the current server address and username
@@ -305,8 +314,8 @@ public class MainActivity2 extends Activity {
         Credential savedCredentials = Credential.getSavedCredentials(getApplicationContext());
 
         if (savedCredentials != null && currentQuestionIndex == 3
-                && savedCredentials.getServerAddress().equals(serverAddress)
-                && savedCredentials.getUsername().equals(username)) {
+                && savedCredentials.serverAddress().equals(serverAddress)
+                && savedCredentials.username().equals(username)) {
             // Fill the password only if the saved server address and username match the current ones
             String savedPassword = getPassword(serverAddress, username);
             if (savedPassword != null) {
@@ -349,7 +358,7 @@ public class MainActivity2 extends Activity {
                 break;
             case 1:
                 username = input;
-                savePasswordCheckbox.setVisibility(VISIBLE);
+                savePasswordCheckbox.setVisibility(View.VISIBLE);
                 inputAutoComplete.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
                 break;
             case 2:
@@ -359,12 +368,15 @@ public class MainActivity2 extends Activity {
                     savePassword();
                 }
                 savePasswordCheckbox.setVisibility(View.GONE);
-                inputAutoComplete.setText("");
+                inputAutoComplete.setInputType(InputType.TYPE_CLASS_TEXT);
+                break;
+            case 3:
+                port = input.isEmpty() ? "22" : input;  // Use default port 22 if input is empty
+                inputAutoComplete.setText("");  // Clear input field
                 inputAutoComplete.setVisibility(View.GONE);
                 inputAutoComplete.setEnabled(false);
                 enterButton.setEnabled(false);
                 enterButton.setVisibility(View.GONE);
-                inputAutoComplete.setInputType(InputType.TYPE_CLASS_TEXT);
                 break;
         }
 
@@ -428,7 +440,7 @@ public class MainActivity2 extends Activity {
 
             try {
                 JSch jsch = new JSch();
-                session = jsch.getSession(username, serverAddress, 22);
+                session = jsch.getSession(username, serverAddress, Integer.parseInt(port));
                 session.setConfig("StrictHostKeyChecking", "yes");
                 session.setConfig("PreferredAuthentications", "publickey,password");
                 session.setPassword(password);
@@ -462,6 +474,7 @@ public class MainActivity2 extends Activity {
         TextView messageTextView = dialogView.findViewById(R.id.dialog_message);
         Button acceptButton = dialogView.findViewById(R.id.button_accept);
         Button denyButton = dialogView.findViewById(R.id.button_deny);
+        Button addKeyButton = dialogView.findViewById(R.id.addKeyButton);
 
         // Set content and behavior for the dialog elements
         titleTextView.setText(R.string.host_key_verification6);
@@ -474,7 +487,7 @@ public class MainActivity2 extends Activity {
             // Handle host key acceptance
             // You can continue with the remote file transfer here
             alertDialog.dismiss(); // Dismiss the dialog
-            performSSHOperations();
+            connectAndExecuteCommand2();
         });
 
         denyButton.setOnClickListener(view -> {
@@ -484,6 +497,16 @@ public class MainActivity2 extends Activity {
             // Show a message or take appropriate action
             alertDialog.dismiss(); // Dismiss the dialog
             runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "Host key denied."));
+        });
+
+        // Set click listeners for buttons
+        addKeyButton.setOnClickListener(view -> {
+            final Animation myAnim = AnimationUtils.loadAnimation(MainActivity2.this, R.anim.bounce);
+            addKeyButton.startAnimation(myAnim);
+            // Handle host key acceptance
+            // You can continue with the remote file transfer here
+            alertDialog.dismiss(); // Dismiss the dialog
+            performSSHOperations();
         });
 
         // Create and show the AlertDialog with the custom layout
@@ -509,7 +532,7 @@ public class MainActivity2 extends Activity {
                 if (!Files.exists(path)) {
                     KeyPair keyPair = KeyPair.genKeyPair(jsch, KeyPair.RSA);
                     keyPair.writePrivateKey(privateKeyPathAndroid);
-                    Log.d("SSH", "Generating private key... : " + privateKeyPathAndroid);
+                    Log.i("SSH", "Generating private key... : " + privateKeyPathAndroid);
                     Files.setPosixFilePermissions(path, PosixFilePermissions.fromString("rw-------"));
 
                     byte[] publicKeyBytes = keyPair.getPublicKeyBlob();
@@ -523,14 +546,13 @@ public class MainActivity2 extends Activity {
                     }
                 }
 
-                Session session = jsch.getSession(username, serverAddress, 22);
+                Session session = jsch.getSession(username, serverAddress, Integer.parseInt(port));
                 session.setConfig("StrictHostKeyChecking", "no");
                 session.setConfig("PreferredAuthentications", "publickey,password");
                 jsch.addIdentity(privateKeyPathAndroid);
                 session.setPassword(password);
                 try {
                     session.connect();
-                    Log.d("SSH", "Authentication successful");
                     uploadPublicKey(session, publicKeyPathAndroid, publicKeyPathServer);
                 } catch (JSchException keyAuthException) {
                     Log.w("SSH4Android", keyAuthException.getMessage(), keyAuthException);
@@ -543,6 +565,7 @@ public class MainActivity2 extends Activity {
                 }
             } catch (JSchException | IOException e) {
                 Log.w("SSH4Android", e.getMessage(), e);
+                runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "JSchException | IOException: " + e.getMessage()));
             }
         });
     }
@@ -555,25 +578,21 @@ public class MainActivity2 extends Activity {
 
         final Path path = Paths.get(publicKeyPathAndroid);
         try (InputStream publicKeyStream = Files.newInputStream(path)) {
-
-            // Read the existing authorized_keys content
             String existingKeysContent = readExistingKeys(session, publicKeyPathServer);
 
-            // Check if the key already exists
             if (publicKeyStream != null && !existingKeysContent.contains(new String(Files.readAllBytes(path)))) {
-                // Append the new key with a newline character at the beginning
                 String newKeyContent = "\n" + new String(Files.readAllBytes(path));
                 String updatedKeysContent = existingKeysContent + newKeyContent;
 
-                // Write the updated content back to the authorized_keys file
                 try (InputStream updatedKeysStream = new ByteArrayInputStream(updatedKeysContent.getBytes())) {
                     channelSftp.put(updatedKeysStream, publicKeyPathServer);
-                    runOnUiThread(() -> GreenCustomToast.showCustomToast(getApplicationContext(), "Key added to accepted_keys"));
-
+                    runOnUiThread(() -> GreenCustomToast.showCustomToast(getApplicationContext(), "Key added to authorized_keys"));
                 } catch (IOException | SftpException e) {
                     Log.w("SSH4Android", e.getMessage(), e);
                     runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "IOException | SftpException: " + e.getMessage()));
                 }
+            } else {
+                runOnUiThread(() -> GreenCustomToast.showCustomToast(getApplicationContext(), "Key already exists in authorized_keys"));
             }
         } catch (IOException e) {
             Log.w("SSH4Android", e.getMessage(), e);
@@ -582,6 +601,7 @@ public class MainActivity2 extends Activity {
             channelSftp.disconnect();
         }
     }
+
 
     // Read existing keys from the authorized_keys file
     private String readExistingKeys(Session session, String publicKeyPathServer) throws JSchException, IOException {
@@ -597,6 +617,7 @@ public class MainActivity2 extends Activity {
             channelSftp.disconnect();
         }
     }
+
 
     // Replace InputStream#readAllBytes with the alternative method
     private byte[] readAllBytes(InputStream inputStream) throws IOException {
@@ -632,7 +653,7 @@ public class MainActivity2 extends Activity {
 
             try {
                 JSch jsch = new JSch();
-                Session session = jsch.getSession(activity.username, activity.serverAddress, 22);
+                Session session = jsch.getSession(activity.username, activity.serverAddress, Integer.parseInt(port));
                 session.setConfig("StrictHostKeyChecking", "no");
                 session.setConfig("PreferredAuthentications", "publickey,password");
                 jsch.addIdentity(privateKeyPathAndroid);
@@ -757,7 +778,7 @@ public class MainActivity2 extends Activity {
                 // You can continue with renaming logic here
                 alertDialog.dismiss(); // Dismiss the dialog
                 // Add your rename logic here
-                renameFile(remoteFilePath, localFilePath, showHiddenFiles);
+                renameFile(remoteFilePath, localFilePath);
             });
 
             overwriteButton.setOnClickListener(view -> {
@@ -806,8 +827,9 @@ public class MainActivity2 extends Activity {
                 // You can continue with renaming logic here
                 alertDialog.dismiss(); // Dismiss the dialog
                 // Add your rename logic here
-                renameFile(remoteFilePath, localFilePath, false);
+                renameFile(remoteFilePath, localFilePath);
             });
+
             // Set click listeners for buttons
             overwriteButton.setOnClickListener(view -> {
                 final Animation myAnim = AnimationUtils.loadAnimation(MainActivity2.this, R.anim.bounce);
@@ -853,13 +875,13 @@ public class MainActivity2 extends Activity {
 
             // Set click listeners for buttons
             renameButton.setOnClickListener(view -> {
-                        final Animation myAnim = AnimationUtils.loadAnimation(MainActivity2.this, R.anim.bounce);
-                        renameButton.startAnimation(myAnim);
-                        // You can continue with renaming logic here
-                        alertDialog.dismiss(); // Dismiss the dialog
-                        // Add your rename logic here
-                        renameFile(remoteFilePath, localFilePath, false);
-                    });
+                final Animation myAnim = AnimationUtils.loadAnimation(MainActivity2.this, R.anim.bounce);
+                renameButton.startAnimation(myAnim);
+                // You can continue with renaming logic here
+                alertDialog.dismiss(); // Dismiss the dialog
+                // Add your rename logic here
+                renameFile(remoteFilePath, localFilePath);
+            });
 
             // Set click listeners for buttons
             overwriteButton.setOnClickListener(view -> {
@@ -898,7 +920,7 @@ public class MainActivity2 extends Activity {
 
             try {
                 JSch jsch = new JSch();
-                Session session = jsch.getSession(username, serverAddress, 22);
+                Session session = jsch.getSession(username, serverAddress, Integer.parseInt(port));
                 session.setConfig("StrictHostKeyChecking", "no");
                 session.setConfig("PreferredAuthentications", "publickey,password");
                 jsch.addIdentity(privateKeyPathAndroid);
@@ -1022,7 +1044,7 @@ public class MainActivity2 extends Activity {
 
             try {
                 JSch jsch = new JSch();
-                Session session = jsch.getSession(username, serverAddress, 22);
+                Session session = jsch.getSession(username, serverAddress, Integer.parseInt(port));
                 session.setConfig("StrictHostKeyChecking", "no");
                 session.setConfig("PreferredAuthentications", "publickey,password");
                 jsch.addIdentity(privateKeyPathAndroid);
@@ -1036,10 +1058,10 @@ public class MainActivity2 extends Activity {
                 channelSftp.cd(remotePath);
 
                 // Get the list of files in the remote directory
-                Vector<ChannelSftp.LsEntry> fileList = channelSftp.ls("*");
+                Vector<LsEntry> fileList = channelSftp.ls("*");
 
                 // Calculate the total size of all files for progress calculation
-                for (ChannelSftp.LsEntry entry : fileList) {
+                for (LsEntry entry : fileList) {
                     totalSize.addAndGet(entry.getAttrs().getSize());
                 }
 
@@ -1052,7 +1074,7 @@ public class MainActivity2 extends Activity {
                 Files.createDirectories(localDirectoryPath);
 
                 // Download each file in the remote directory
-                for (ChannelSftp.LsEntry entry : fileList) {
+                for (LsEntry entry : fileList) {
                     String remoteFile = entry.getFilename();
                     String localFile = localDirectoryPath + File.separator + remoteFile;
 
@@ -1060,7 +1082,7 @@ public class MainActivity2 extends Activity {
                         // Download file if it's not a directory
                         byte[] buffer = new byte[1024];
                         int bytesRead;
-                        runOnUiThread(() -> progressBar.setVisibility(View.VISIBLE));
+                        runOnUiThread(() -> progressBar.setVisibility(VISIBLE));
 
                         try (OutputStream outputStream = Files.newOutputStream(Paths.get(localFile));
                              InputStream inputStream = channelSftp.get(remoteFile)) {
@@ -1096,8 +1118,6 @@ public class MainActivity2 extends Activity {
                     progressBar.setVisibility(View.GONE);
                 });
 
-
-
             } catch (JSchException | SftpException | IOException | InterruptedException e) {
                 Log.w("SSH4Android", e.getMessage(), e);
                 runOnUiThread(() -> CustomToast.showCustomToast(getApplicationContext(), "Error copying directory."));
@@ -1124,7 +1144,7 @@ public class MainActivity2 extends Activity {
         }).start();
     }
 
-    private void renameFile(String remoteFilePath, String localFilePath, boolean showHiddenFiles) {
+    private void renameFile(String remoteFilePath, String localFilePath) {
         // Extract the filename and file extension from the localFilePath
         File originalFile = new File(localFilePath);
 
@@ -1168,7 +1188,7 @@ public class MainActivity2 extends Activity {
             return;
         }
         // Proceed with downloading or any other action
-        downloadFileWithOverwrite(remoteFilePath, renamedFilePath, showHiddenFiles);
+        startDownload(remoteFilePath, renamedFilePath);
     }
 
     private void updateFileListView(List<String> newDirectoryContents, boolean showHiddenFiles){
@@ -1235,7 +1255,7 @@ public class MainActivity2 extends Activity {
         String compressedFileName = new File(remotePath).getName() + ".zip";
         File compressedFile = new File(localParentPath + ".zip");
 
-        if (compressedFile.exists() && !compressedFile.isDirectory())  {
+        if (compressedFile.exists() && !compressedFile.isDirectory()) {
             // Compressed file is previously downloaded, confirm overwrite
             overwriteConfirm2(remotePath, String.valueOf(compressedFile));
         } else {
@@ -1249,7 +1269,7 @@ public class MainActivity2 extends Activity {
 
                 try {
                     JSch jsch = new JSch();
-                    Session session = jsch.getSession(username, serverAddress, 22);
+                    Session session = jsch.getSession(username, serverAddress, Integer.parseInt(port));
                     session.setConfig("StrictHostKeyChecking", "no");
                     session.setConfig("PreferredAuthentications", "publickey,password");
                     jsch.addIdentity(privateKeyPathAndroid);
@@ -1297,6 +1317,8 @@ public class MainActivity2 extends Activity {
             });
         }
     }
+
+
 
     private void compressDirectory(String remotePath, String compressedFilePath, ChannelSftp channelSftp) {
         try (ZipOutputStream zipOutputStream = new ZipOutputStream(new FileOutputStream(compressedFilePath))) {
@@ -1373,7 +1395,7 @@ public class MainActivity2 extends Activity {
 
             try {
                 JSch jsch = new JSch();
-                Session session = jsch.getSession(username, serverAddress, 22);
+                Session session = jsch.getSession(username, serverAddress, Integer.parseInt(port));
                 session.setConfig("StrictHostKeyChecking", "no");
                 session.setConfig("PreferredAuthentications", "publickey,password");
                 jsch.addIdentity(privateKeyPathAndroid);
