@@ -756,15 +756,26 @@ public class MainActivity5 extends AppCompatActivity {
         ViewCompat.setOnApplyWindowInsetsListener(root, (v, insets) -> {
             imeVisible = insets.isVisible(WindowInsetsCompat.Type.ime());
             int kbHeight = insets.getInsets(WindowInsetsCompat.Type.ime()).bottom;
+
             FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) terminalView.getLayoutParams();
-            lp.height = root.getHeight() - (imeVisible ? kbHeight : 0);
+            lp.height = FrameLayout.LayoutParams.MATCH_PARENT;
             lp.gravity = Gravity.TOP;
+            lp.bottomMargin = imeVisible ? kbHeight : 0;
             terminalView.setLayoutParams(lp);
-            terminalView.requestLayout();
+
+            // Give the emulator some breathing room so the prompt never hides under the IME
+            terminalView.setPadding(
+                    terminalView.getPaddingLeft(),
+                    terminalView.getPaddingTop(),
+                    terminalView.getPaddingRight(),
+                    imeVisible ? kbHeight : 0
+            );
+
             terminalView.post(() -> {
                 terminalView.updateSize(true);
                 Log.d("Terminal", "Keyboard visible: " + imeVisible + ", kbHeight: " + kbHeight + ", viewHeight: " + terminalView.getHeight());
             });
+
             return insets;
         });
 
