@@ -1,0 +1,120 @@
+{
+  "formatVersion": "1.1",
+  "component": {
+    "group": "com.android.tools.build",
+    "module": "builder-model",
+    "version": "8.3.2",
+    "attributes": {
+      "org.gradle.status": "release"
+    }
+  },
+  "createdBy": {
+    "gradle": {
+      "version": "8.4"
+    }
+  },
+  "variants": [
+    {
+      "name": "apiElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.jvm.version": 11,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-api",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "files": [
+        {
+          "name": "builder-model-8.3.2.jar",
+          "url": "builder-model-8.3.2.jar",
+          "size": 118345,
+          "sha512": "2cc381ccce542e3675e931f603a88f8f7195018a7d537be318ccda43c37fc82e9636fce7746ccb50ac04987f70354d138cec57fbf4a7f0b6d06eefbd2044403f",
+          "sha256": "4425f79fbbf84fcee0819425bc37e0a5446cbb0ce825742bea3df6e60a0a2a7c",
+          "sha1": "58cdfab79e8641b54ac79b448f11158a2dde47f5",
+          "md5": "22f4edb27de297dca64deecae4d427d6"
+        }
+      ]
+    },
+    {
+      "name": "runtimeElements",
+      "attributes": {
+        "org.gradle.category": "library",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.jvm.environment": "standard-jvm",
+        "org.gradle.jvm.version": 11,
+        "org.gradle.libraryelements": "jar",
+        "org.gradle.usage": "java-runtime",
+        "org.jetbrains.kotlin.platform.type": "jvm"
+      },
+      "dependencies": [
+        {
+          "group": "com.android.tools",
+          "module": "annotations",
+          "version": {
+            "requires": "31.3.2"
+          }
+        },
+        {
+          "group": "org.jetbrains.kotlin",
+          "module": "kotlin-stdlib-jdk8",
+          "version": {
+            "requires": "1.9.20"
+          }
+        }
+      ],
+      "files": [
+        {
+          "name": "builder-model-8.3.2.jar",
+          "url": "builder-model-8.3.2.jar",
+          "size": 118345,
+          "sha512": "2cc381ccce542e3675e931f603a88f8f7195018a7d537be318ccda43c37fc82e9636fce7746ccb50ac04987f70354d138cec57fbf4a7f0b6d06eefbd2044403f",
+          "sha256": "4425f79fbbf84fcee0819425bc37e0a5446cbb0ce825742bea3df6e60a0a2a7c",
+          "sha1": "58cdfab79e8641b54ac79b448f11158a2dde47f5",
+          "md5": "22f4edb27de297dca64deecae4d427d6"
+        }
+      ]
+    },
+    {
+      "name": "javadocElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "javadoc",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "builder-model-8.3.2-javadoc.jar",
+          "url": "builder-model-8.3.2-javadoc.jar",
+          "size": 291474,
+          "sha512": "4375c68fea4f12145a5d0e748e62863fecb8dfc668a9649db572861c18ddfc282ed3b5f3ec065f7f31054d84ca145315b17dac3ce275385aae5da684f1196c32",
+          "sha256": "4ab82427e44f03d189b4698b751a961e4693bacd1aea53736908663d85929c0b",
+          "sha1": "88296e76ef3826e915c148636709f511ef3cb172",
+          "md5": "702bdb8882062cbf5b1e803837b36cba"
+        }
+      ]
+    },
+    {
+      "name": "sourcesElements",
+      "attributes": {
+        "org.gradle.category": "documentation",
+        "org.gradle.dependency.bundling": "external",
+        "org.gradle.docstype": "sources",
+        "org.gradle.usage": "java-runtime"
+      },
+      "files": [
+        {
+          "name": "builder-model-8.3.2-sources.jar",
+          "url": "builder-model-8.3.2-sources.jar",
+          "size": 142271,
+          "sha512": "02257602c0085399156ba86071568cd1a05961b06b07ee66ace37e8d83d194c0388a04a6eaf070da11bc56984919ecf824a7007a5192b3e713453aa8880f84e3",
+          "sha256": "791e4d69f4509906cb32709b7253dd09303d3e8dc439fc47707dac931d404c89",
+          "sha1": "47b0d38b114d13451376a4873339370f547c46b1",
+          "md5": "359cf912e69ad9eac6dbdee629087df9"
+        }
+      ]
+    }
+  ]
+}
